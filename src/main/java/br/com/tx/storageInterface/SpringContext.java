@@ -8,6 +8,7 @@ public class SpringContext {
 
 	public static void setSpringContext(ConfigurableApplicationContext context_) {
 		context = context_;
+
 	}
 
 	public static ConfigurableApplicationContext getSpringContext() {
