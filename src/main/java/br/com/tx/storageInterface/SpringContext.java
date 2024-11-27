@@ -13,4 +13,5 @@ public class SpringContext {
 	public static ConfigurableApplicationContext getSpringContext() {
 		return context;
 	}
+	
 }
