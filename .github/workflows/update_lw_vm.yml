@@ -87,7 +87,7 @@ jobs:
                     # UP DEV
                     cd ${{env.VM_DEV_PATH}}/
                     docker load < image-storageinterface-dev.tar
-                    docker run -d --name storageinterface-dev -p 2002:80 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-dev
+                    docker run -d --name storageinterface-dev -p 2002:9090 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-dev
 
                   elif [ $1 == "main" ]; then
                     # DROP PROD
@@ -97,7 +97,7 @@ jobs:
                     # UP PROD
                     cd ${{env.VM_PROD_PATH}}/
                     docker load < image-storageinterface-prod.tar
-                    docker run -d --name storageinterface-prod -p 2003:80 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-prod
+                    docker run -d --name storageinterface-prod -p 2003:9090 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-prod
                   fi
                 }
                 main ${{github.base_ref}} 
