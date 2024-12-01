@@ -1,0 +1,105 @@
+name: Update LocalWeb VM
+
+on:
+    pull_request:
+        branches:
+          - main
+          - dev
+jobs:
+    start-main:
+        runs-on: ubuntu-latest
+        env:
+          SSH_USERNAME: ${{ secrets.LW_VM001_USER_NAME }}
+          SSH_PASSWORD: ${{ secrets.LW_VM001_USER_PASSD }}
+          VM_IP: ${{ secrets.LOCAL_WEB_IP_VM_001 }}
+          VM_DEV_PATH: ${{ vars.LOCAL_WEB_DEV_PATH_MV_001 }}
+          VM_PROD_PATH: ${{vars.LOCAL_WEB_PROD_PATH_MV_001}}
+          VM_MAC: ${{ secrets.LOCAL_WEB_MAC_VM_001 }}
+          VM_INT_IP: ${{secrets.LOCAL_WEB_INT_IP_VM_001}}
+
+        steps:
+            - name: Check out the repository
+              uses: actions/checkout@v2
+          
+            - name: Set up Docker
+              uses: docker/setup-buildx-action@v2
+
+
+            - name: Build and save docker tar.
+              run: |
+                # $1 -> "dev" | "main"
+                main () {
+                  if [ $1 == "dev" ]; then
+                    docker build --rm -f "DockerFile" -t image-storageinterface-dev:latest "."
+                    docker save -o image-storageinterface-dev.tar image-storageinterface-dev:latest
+                  elif [ $1 == "main" ]; then
+                    docker build --rm -f "DockerFile" -t image-storageinterface-prod:latest "."
+                    docker save -o image-storageinterface-prod.tar image-storageinterface-prod:latest
+                  else
+                    docker build --rm -f "DockerFile" -t image-storageinterface:latest "."
+                    docker save -o image-storageinterface.tar image-storageinterface:latest "."
+                  fi
+                }
+                main ${{github.base_ref}} 
+
+            - name: Install sshpass
+              run: sudo apt-get install -y sshpass
+            
+            - name: Remove current tar.
+              run: |
+                sshpass -p '${{env.SSH_PASSWORD}}' ssh -v -o StrictHostKeyChecking=no ${{env.SSH_USERNAME}}@${{env.VM_IP}} <<'ENDSSH'
+                # $1 -> "dev" | "main"
+                main () {
+                  if [ $1 == "dev" ]; then
+                    rm -rf ${{env.VM_DEV_PATH}}/*
+
+                  elif [ $1 == "main" ]; then
+                    rm -rf ${{env.VM_PROD_PATH}}/*
+
+                  fi
+                }
+                main ${{github.base_ref}} 
+                ENDSSH
+
+            - name: Move new tar
+              run: |
+                # $1 -> "dev" | "main"
+                main () {
+                  if [ $1 == "dev" ]; then
+                    sshpass -p '${{env.SSH_PASSWORD}}' scp -v -o StrictHostKeyChecking=no -r *.tar ${{env.SSH_USERNAME}}@${{env.VM_IP}}:${{env.VM_DEV_PATH}}
+                  elif [ $1 == "main" ]; then
+                    sshpass -p '${{env.SSH_PASSWORD}}' scp -v -o StrictHostKeyChecking=no -r *.tar ${{env.SSH_USERNAME}}@${{env.VM_IP}}:${{env.VM_PROD_PATH}}
+                  fi
+                }
+                main ${{github.base_ref}} 
+
+            - name: Drop Current container and up new
+              run: |
+                # $1 -> "dev" | "main"
+                sshpass -p '${{env.SSH_PASSWORD}}' ssh -v -o StrictHostKeyChecking=no ${{env.SSH_USERNAME}}@${{env.VM_IP}} <<'ENDSSH'
+                main () {
+                  if [ $1 == "dev" ]; then
+                    # DROP DEV
+                    docker stop storageinterface-dev || true
+                    docker rm storageinterface-dev || true
+                    docker rmi image-storageinterface-dev || true
+
+                    # UP DEV
+                    cd ${{env.VM_DEV_PATH}}/
+                    docker load < image-storageinterface-dev.tar
+                    docker run -d --name storageinterface-dev -p 2002:80 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-dev
+
+                  elif [ $1 == "main" ]; then
+                    # DROP PROD
+                    docker stop storageinterface-prod || true
+                    docker rm storageinterface-prod || true
+                    docker rmi image-storageinterface-prod || true
+                    # UP PROD
+                    cd ${{env.VM_PROD_PATH}}/
+                    docker load < image-storageinterface-prod.tar
+                    docker run -d --name storageinterface-prod -p 2003:80 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-prod
+                  fi
+                }
+                main ${{github.base_ref}} 
+                ENDSSH
+                
