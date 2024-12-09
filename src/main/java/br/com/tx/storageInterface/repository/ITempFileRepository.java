@@ -10,8 +10,8 @@ public interface ITempFileRepository extends MongoRepository<TempFileModel, Stri
 	@Query("{ 'keyID': ?0, 'tempDirID': ?1}")
 	public TempFileModel findByKeyIDAndTempDirID(String keyID, String tempDirID);
 
-	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'fileInfoModel.packageVersionID': ?5, 'fileInfoModel.deleted': false }")
-	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, String packageVersionID);
+	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'fileInfoModel.deleted': false }")
+	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID);
 	
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.packageVersionID': ?3}")
 	public TempFileModel[] findBypackageID(String processID, String processVersionID, String packageID, String packageVersionID);

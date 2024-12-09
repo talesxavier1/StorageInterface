@@ -57,7 +57,7 @@ public class FileManagerController {
 
 		if (command == FileManagerGetComandEum.GetDirContents) {
 			
-			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, packageVersionID);
+			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID);
 			if(tempResult.length > 0) {
 				response.setSuccess(true);
 				response.setResult(tempResult);
