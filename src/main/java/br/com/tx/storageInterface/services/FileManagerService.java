@@ -46,16 +46,16 @@ public class FileManagerService {
 		newFileInfoModel.setProcessVersionID(processVersionID);
 		newFileInfoModel.setPackageVersionID(packageVersionID);
 		
-		TempFileModel newFileModel = new TempFileModel();
-		newFileModel.setKeyID(UUID.randomUUID().toString());
-		newFileModel.setFileInfoModel(newFileInfoModel);
-		newFileModel.setTempDirID(tempDirID);
-		newFileModel.setTempDirDate(Utils.getDateNow());
-		newFileModel.setName(argumentsModel.getName());
-		newFileModel.setDateCreated(Utils.getDateNow());
-		newFileModel.setIsDirectory(true);
-		newFileModel.setSize(0);
-		newFileModel.setHasSubDirectories(false);
+		TempFileModel newTempFileModel = new TempFileModel();
+		newTempFileModel.setKeyID(UUID.randomUUID().toString());
+		newTempFileModel.setFileInfoModel(newFileInfoModel);
+		newTempFileModel.setTempDirID(tempDirID);
+		newTempFileModel.setTempDirDate(Utils.getDateNow());
+		newTempFileModel.setName(argumentsModel.getName());
+		newTempFileModel.setDateCreated(Utils.getDateNow());
+		newTempFileModel.setIsDirectory(true);
+		newTempFileModel.setSize(0);
+		newTempFileModel.setHasSubDirectories(false);
 		
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String parentKey = null;
@@ -66,10 +66,10 @@ public class FileManagerService {
 			parentKeyID = parentKeySplit[parentKeySplit.length - 1];
 			newFileInfoModel.setParentKey(parentKey);
 
-			newFileModel.setKey(String.format("%s/%s", parentKey, newFileModel.getKeyID()));
+			newTempFileModel.setKey(String.format("%s/%s", parentKey, newTempFileModel.getKeyID()));
 		} else {
 			newFileInfoModel.setParentKey("");
-			newFileModel.setKey(newFileModel.getKeyID());
+			newTempFileModel.setKey(newTempFileModel.getKeyID());
 		}
 
 		try {
@@ -83,7 +83,7 @@ public class FileManagerService {
 				dbService.getTempFileRepository().save(parentFileModel);
 			}
 
-			dbService.getTempFileRepository().insert(newFileModel);
+			dbService.getTempFileRepository().insert(newTempFileModel);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
@@ -110,7 +110,7 @@ public class FileManagerService {
 		return null;
 	}
 	
-	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, String packageVersionID) {
+	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
 		try {
 			if (!Utils.stringHasValue(tempDirID)) {
 				return new TempFileModel[0];
@@ -121,7 +121,7 @@ public class FileManagerService {
 				key = pathInfoModels[pathInfoModels.length - 1].getKey();
 			}
 
-			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, packageVersionID);
+			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID);
 
 			return result;
 		} catch (Exception e) {
@@ -261,10 +261,10 @@ public class FileManagerService {
 					String[] destinationKeySplit = destinationKey.split("/");
 					String destinationKeyID = destinationKeySplit[destinationKeySplit.length - 1];
 
-					FileModel destinationFileModel = this.dbService.getFilesRepository().findByKeyIDAndTempDirID(destinationKeyID, tempDirID);
+					TempFileModel destinationFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(destinationKeyID, tempDirID);
 					if (destinationFileModel != null) {
 						destinationFileModel.setHasSubDirectories(true);
-						this.dbService.getFilesRepository().save(destinationFileModel);
+						this.dbService.getTempFileRepository().save(destinationFileModel);
 					}
 				}
 				
@@ -431,7 +431,7 @@ public class FileManagerService {
 	}
 
 	public void insertFilelHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
-		dbService.getFilesRepository().insert(filelHierarchyModel.getSourceFileModel());
+		dbService.getTempFileRepository().insert(filelHierarchyModel.getSourceFileModel());
 		for (FilelHierarchyModel child : filelHierarchyModel.getChildsFileModel()) {
 			insertFilelHierarchyModel(child);
 		}
@@ -524,7 +524,7 @@ public class FileManagerService {
 		newFilelHierarchyModel.setSourceFileModel(sourceFileModel);
 		
 		var childsFileModelList = new ArrayList<FilelHierarchyModel>();
-		TempFileModel[] childsFileModel = this.dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, sourceFileModel.getKey(), tempDirID, "");
+		TempFileModel[] childsFileModel = this.dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, sourceFileModel.getKey(), tempDirID);
 		for (TempFileModel child : childsFileModel) {
 			var childFilelHierarchyModel = buildFilelHierarchy(processID, processVersionID, packageID, child, tempDirID );
 			childsFileModelList.add(childFilelHierarchyModel);
