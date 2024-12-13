@@ -59,7 +59,8 @@ public class FileManagerController {
 		if (command == FileManagerGetComandEum.GetDirContents) {
 			
 			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID);
-			if(tempResult.length > 0) {
+			boolean tempDirExist = this.fileManagerService.tempDirExist(tempDirID);
+			if (tempResult.length > 0 || tempDirExist) {
 				response.setSuccess(true);
 				response.setResult(tempResult);
 			} else {
@@ -113,12 +114,13 @@ public class FileManagerController {
 			@RequestHeader String processID,
 			@RequestHeader String processVersionID,
 			@RequestHeader String packageID,
-			@RequestHeader String arguments
+			@RequestHeader String arguments,
+			@RequestHeader(required = false) String tempDirID
 	) throws IOException {
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
 		
-		String tempFilePath = this.fileManagerService.download(argumentsModel, processID, processVersionID, packageID);
+		String tempFilePath = this.fileManagerService.download(argumentsModel, processID, processVersionID, packageID, tempDirID);
 		if (tempFilePath == null) {
 			return ResponseEntity.notFound().build();
 		}
