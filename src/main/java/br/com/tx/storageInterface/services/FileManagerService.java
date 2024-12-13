@@ -132,6 +132,10 @@ public class FileManagerService {
 		
 	}
 
+	public boolean tempDirExist(String tempDirID) {
+		return dbService.getTempFileRepository().tempDirExist(tempDirID);
+	}
+
 	@Transactional(rollbackFor = Exception.class)
 	public boolean createTempDirContent(String processID, String processVersionID, String packageID,String packageVersionID, String tempDirID) {
 		
@@ -205,7 +209,7 @@ public class FileManagerService {
 		return true;
 	}
 
-	@Transactional(rollbackFor = Exception.class)
+//	@Transactional(rollbackFor = Exception.class)
 	public boolean logicalDeletion(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = pathInfoModels[pathInfoModels.length - 1].getKey();
@@ -220,13 +224,13 @@ public class FileManagerService {
 		
 		String parentKey = fileModel.getFileInfoModel().getParentKey();
 		if (Utils.stringHasValue(parentKey)) {
-			long parentChildsQuantity = this.dbService.getFilesRepository().countByParentKey(processID, processVersionID, packageID, parentKey, tempDirID);
-			if(parentChildsQuantity == 0 && fileModel.getIsDirectory()) {
+			long parentChildsQuantity = this.dbService.getTempFileRepository().countByKey(processID, processVersionID, packageID, parentKey, tempDirID);
+			if (parentChildsQuantity > 0 && fileModel.getIsDirectory()) {
 				String[] splitParentKey = parentKey.split("/");
 				String parentkeyID = splitParentKey[splitParentKey.length - 1];
-				FileModel parentFileModel = this.dbService.getFilesRepository().findByKeyIDAndTempDirID(parentkeyID, tempDirID);
+				TempFileModel parentFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentkeyID, tempDirID);
 				parentFileModel.setHasSubDirectories(false);
-				this.dbService.getFilesRepository().save(parentFileModel);
+				this.dbService.getTempFileRepository().save(parentFileModel);
 			}	
 		}
 		
@@ -374,10 +378,6 @@ public class FileManagerService {
 			newFileInfoModel.setDefaultAccount(drive.getDefaultAccout());
 			newFileInfoModel.setDeleted(false);
 			
-//			newFileInfoModel.setIsTempDir(true);
-//			newFileInfoModel.setTempDirDate(Utils.getDateNow());
-//			newFileInfoModel.setTempDirID(tempDirID);
-			
 			if (destinationPathInfoModel != null) {
 				newFileInfoModel.setParentKey(destinationPathInfoModel.getKey());
 			} else {
@@ -385,7 +385,7 @@ public class FileManagerService {
 			}
 			newFileInfoModel.setFileDriveID(fileDriveID);
 
-			FileModel newFileModel = new FileModel();
+			TempFileModel newFileModel = new TempFileModel();
 			newFileModel.setFileInfoModel(newFileInfoModel);
 			newFileModel.setKeyID(UUID.randomUUID().toString());
 			if (destinationPathInfoModel != null) {
@@ -398,8 +398,10 @@ public class FileManagerService {
 			newFileModel.setIsDirectory(false);
 			newFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
 			newFileModel.setHasSubDirectories(false);
+			newFileModel.setTempDirDate(Utils.getDateNow());
+			newFileModel.setTempDirID(tempDirID);
 
-			this.dbService.getFilesRepository().insert(newFileModel);
+			this.dbService.getTempFileRepository().insert(newFileModel);
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -408,21 +410,32 @@ public class FileManagerService {
 		}
 	}
 	
-	public String download(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID) {
+	public String download(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
 
 		PathInfoModel[] infoModels = argumentsModel.getPathInfo();
 		PathInfoModel pathInfoModel = infoModels[infoModels.length - 1];
 		String fileKey = pathInfoModel.getKey();
 		String[] fileKeySplit = fileKey.split("/");
 		String fileKeyID = fileKeySplit[fileKeySplit.length - 1];
-
-		FileModel fileModel = this.dbService.getFilesRepository().findByKeyID(fileKeyID);
-		String driveFileID = fileModel.getFileInfoModel().getFileDriveID();
 		
+		String driveFileID = null;
+		String fileName = null;
+		
+		TempFileModel tempFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
+		if(tempFileModel != null) {
+			driveFileID = tempFileModel.getFileInfoModel().getFileDriveID();
+			fileName = tempFileModel.getName();
+		} else {
+			FileModel fileModel = this.dbService.getFilesRepository().findByKeyID(fileKeyID);
+			driveFileID = fileModel.getFileInfoModel().getFileDriveID();
+			fileName = fileModel.getName();
+		}
+
+
 		String tempFilePath = null;
 		try {
 			GoogleDrive drive = new GoogleDrive(redisTemplate);
-			tempFilePath = drive.downloadFile(driveFileID, fileModel.getName());
+			tempFilePath = drive.downloadFile(driveFileID, fileName);
 		} catch (GeneralSecurityException | IOException e) {
 			e.printStackTrace();
 			return null;
@@ -445,9 +458,9 @@ public class FileManagerService {
 	}
 
 	public void logicalDeleteHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
-		FileModel fileModel = filelHierarchyModel.getSourceFileModel();
+		TempFileModel fileModel = filelHierarchyModel.getSourceFileModel();
 		fileModel.getFileInfoModel().setDeleted(true);
-		this.dbService.getFilesRepository().save(fileModel);
+		this.dbService.getTempFileRepository().save(fileModel);
 
 		for (FilelHierarchyModel child : filelHierarchyModel.getChildsFileModel()) {
 			logicalDeleteHierarchyModel(child);
