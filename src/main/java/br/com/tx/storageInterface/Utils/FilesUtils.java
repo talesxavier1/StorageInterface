@@ -19,6 +19,12 @@ import com.google.gson.JsonParser;
 public class FilesUtils {
 	private static final String PATH = "src/main/resources/temp/";
 
+	static {
+		var a = "";
+		String tempDir = System.getProperty("java.io.tmpdir") + "/temp/";
+		var b = "";
+	}
+
 	public static Path tryGetPath(String stringPath) {
 		try {
 			return Paths.get(stringPath);
