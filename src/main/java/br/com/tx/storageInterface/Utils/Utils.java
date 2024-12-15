@@ -27,7 +27,10 @@ public class Utils {
 		} else {
 			return OSEnum.OTHERS;
 		}
+	}
 
+	public static String getCurrentOSSeparator() {
+		return System.getProperty("file.separator");
 	}
 }
 
