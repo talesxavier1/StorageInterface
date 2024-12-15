@@ -6,8 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -18,11 +17,14 @@ import com.google.gson.JsonParser;
 
 public class FilesUtils {
 	private static final String PATH = "src/main/resources/temp/";
+	private static final String SEPARATOR = Utils.getCurrentOSSeparator();
+	private static final String TEMP_DIR_PATH = System.getProperty("java.io.tmpdir");
+	private static final String TEMP_FOLDER_NAME = UUID.randomUUID().toString() + "-" + "StorageInterface";
+	private static final String FINAL_TEMP_PATH = TEMP_DIR_PATH + TEMP_FOLDER_NAME;
 
 	static {
-		var a = "";
-		String tempDir = System.getProperty("java.io.tmpdir") + "/temp/";
-		var b = "";
+		checkExistTempFolder();
+		System.out.println("--------- Diretório tempoário: " + FINAL_TEMP_PATH);
 	}
 
 	public static Path tryGetPath(String stringPath) {
@@ -83,23 +85,20 @@ public class FilesUtils {
 		return finalPath;
 	}
 
-	public static Map<String, String> listTempFiles() {
-		checkExistTempFolder();
-		File directory = new File(PATH);
-		String[] filesName = directory.list();
-
-		Map<String, String> filesMap = new HashMap<String, String>();
-		for (String name : filesName) {
-			String[] splitName = name.split("-");
-			filesMap.put(splitName[0], PATH + "/" + name);
-		}
-		
-		return filesMap;
-	}
+	/*
+	 * public static Map<String, String> listTempFiles_() { File directory = new
+	 * File(FINAL_TEMP_PATH); String[] filesName = directory.list();
+	 * 
+	 * Map<String, String> filesMap = new HashMap<String, String>(); for (String
+	 * name : filesName) { String[] splitName = name.split("-");
+	 * filesMap.put(splitName[0], PATH + "/" + name); }
+	 * 
+	 * return filesMap; }
+	 */
 
 	// ----------------------------------------- Private ----------------------------------------- //
 	private static void checkExistTempFolder() {
-		File directory = new File(PATH);
+		File directory = new File(TEMP_DIR_PATH + SEPARATOR + TEMP_FOLDER_NAME);
 		if (!directory.exists()) {
 			directory.mkdir();
 		}
@@ -113,8 +112,7 @@ public class FilesUtils {
 	}
 
 	private static String createFile(String fileName, byte[] fileBytes) {
-		checkExistTempFolder();
-		String filePath = PATH + fileName;
+		String filePath = FINAL_TEMP_PATH + SEPARATOR + fileName;
 		File file = new File(filePath);
 
 		try (var os = new FileOutputStream(file)) {
@@ -127,8 +125,7 @@ public class FilesUtils {
 	}
 
 	private static String createJsonFile(String fileName, String jsonString, Object object) {
-		checkExistTempFolder();
-		String filePath = PATH + fileName;
+		String filePath = FINAL_TEMP_PATH + SEPARATOR + fileName;
 		if (jsonString != null) {
 			JsonElement jsonElement = JsonParser.parseString(jsonString);
 
