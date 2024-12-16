@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import javax.naming.directory.NoSuchAttributeException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mock.web.MockMultipartFile;
@@ -159,32 +161,47 @@ public class FileManagerService {
 		return true;
 	}
 
-	public String getFileContent(ArgumentsModel argumentsModel) {
+	public String getFileContent(ArgumentsModel argumentsModel, String tempDirID) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
-		String id = null;
-		if (pathInfoModels.length > 0) {
-			String key = pathInfoModels[pathInfoModels.length - 1].getKey();
-			String[] splitKey = key.split("/");
-			id = splitKey[splitKey.length - 1];
-		}
-		
-		if (id == null || id.isBlank()) {
-			return "";
-		}
-
-		FileModel fileModel = dbService.getFilesRepository().findByKeyID(id);
-		if (fileModel == null) {
-			return "";
-		}
-
 		try {
-			GoogleDrive drive = new GoogleDrive(redisTemplate);
-			String result = drive.getFileContent(fileModel.getFileInfoModel().getFileDriveID());
-			return result;
-		} catch (GeneralSecurityException | IOException e) {
-			e.printStackTrace();
+			String keyID = null;
+			if (pathInfoModels.length > 0) {
+				String key = pathInfoModels[pathInfoModels.length - 1].getKey();
+				String[] splitKey = key.split("/");
+				keyID = splitKey[splitKey.length - 1];
+			}
+			if (!Utils.stringHasValue(keyID)) {
+				throw new NoSuchAttributeException("Não foi possível obter o keyID do pathInfoModels.");
+			}
+
+			FileModel fileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+			if (fileModel == null) {
+				fileModel = dbService.getFilesRepository().findByKeyID(keyID);
+			}
+			if (fileModel == null) {
+				throw new NoSuchAttributeException("Não foi possível obter o fileModel de keyID: " + keyID);
+			}
+			
+			
+			String fileDriveID = fileModel.getFileInfoModel().getFileDriveID();
+			if (!Utils.stringHasValue(fileDriveID)) {
+				throw new NoSuchAttributeException("Não foi possível obter o fileDriveID do fileModel _id: " + fileModel.get_id());
+			}
+			
+			try {
+				GoogleDrive drive = new GoogleDrive(redisTemplate);
+				String result = drive.getFileContent(fileModel.getFileInfoModel().getFileDriveID());
+				return result;
+			} catch (GeneralSecurityException | IOException e) {
+				e.printStackTrace();
+				return "";
+			}
+
+		} catch (Exception err) {
+			err.printStackTrace();
 			return "";
 		}
+
 	}
 
 	@Transactional(rollbackFor = Exception.class)

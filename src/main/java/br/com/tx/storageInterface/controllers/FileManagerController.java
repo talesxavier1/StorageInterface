@@ -76,7 +76,7 @@ public class FileManagerController {
 		}
 
 		if (command == FileManagerGetComandEum.GetFileContent) {
-			String result = this.fileManagerService.getFileContent(argumentsModel);
+			String result = this.fileManagerService.getFileContent(argumentsModel, tempDirID);
 			response.setStrResult(result);
 		}
 

@@ -23,10 +23,6 @@ public class FilesUtils {
 
 	static {
 		checkExistTempFolder();
-//		System.out.println("SEPARATOR " + SEPARATOR);
-//		System.out.println("TEMP_DIR_PATH " + TEMP_DIR_PATH);
-//		System.out.println("TEMP_FOLDER_NAME " + TEMP_FOLDER_NAME);
-//		System.out.println("FINAL_TEMP_PATH " + FINAL_TEMP_PATH);
 	}
 
 	public static Path tryGetPath(String stringPath) {
@@ -86,17 +82,6 @@ public class FilesUtils {
 		}
 		return finalPath;
 	}
-
-	/*
-	 * public static Map<String, String> listTempFiles_() { File directory = new
-	 * File(FINAL_TEMP_PATH); String[] filesName = directory.list();
-	 * 
-	 * Map<String, String> filesMap = new HashMap<String, String>(); for (String
-	 * name : filesName) { String[] splitName = name.split("-");
-	 * filesMap.put(splitName[0], PATH + "/" + name); }
-	 * 
-	 * return filesMap; }
-	 */
 
 	// ----------------------------------------- Private ----------------------------------------- //
 	private static void checkExistTempFolder() {
