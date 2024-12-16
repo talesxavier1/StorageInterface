@@ -8,4 +8,10 @@ FROM openjdk:17-alpine
 COPY --from=build /app/target/ /home/app/StorageInterface/target
 
 EXPOSE 9090
+EXPOSE 5005
+
+
 ENTRYPOINT [ "java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/home/app/StorageInterface/target/StorageInterface-0.0.1-SNAPSHOT.jar" ]
+
+#docker build --pull --rm -f "DockerFile" -t storageinterface:latest "." 
+#docker run -d --name storageinterface-dev -p 2002:9090 -e jasypt.encryptor.password=${{secrets.JASYPT_ENCRYPTOR_PASSWORD}} image-storageinterface-dev
