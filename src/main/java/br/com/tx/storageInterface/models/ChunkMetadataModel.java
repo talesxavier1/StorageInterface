@@ -28,9 +28,9 @@ public class ChunkMetadataModel implements Serializable {
 		return UploadId;
 	}
 
-	public void setUploadId(String uploadId) {
-		uploadId = uploadId;
-	}
+//	public void setUploadId(String uploadId) {
+//		uploadId = uploadId;
+//	}
 
 	public String getFileName() {
 		return FileName;

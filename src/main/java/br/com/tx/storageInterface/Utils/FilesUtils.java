@@ -16,15 +16,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 
 public class FilesUtils {
-	private static final String PATH = "src/main/resources/temp/";
 	private static final String SEPARATOR = Utils.getCurrentOSSeparator();
-	private static final String TEMP_DIR_PATH = System.getProperty("java.io.tmpdir");
+	private static final String TEMP_DIR_PATH = Utils.getOSTempDir();
 	private static final String TEMP_FOLDER_NAME = UUID.randomUUID().toString() + "-" + "StorageInterface";
 	private static final String FINAL_TEMP_PATH = TEMP_DIR_PATH + TEMP_FOLDER_NAME;
 
 	static {
 		checkExistTempFolder();
-		System.out.println("--------- Diretório tempoário: " + FINAL_TEMP_PATH);
+//		System.out.println("SEPARATOR " + SEPARATOR);
+//		System.out.println("TEMP_DIR_PATH " + TEMP_DIR_PATH);
+//		System.out.println("TEMP_FOLDER_NAME " + TEMP_FOLDER_NAME);
+//		System.out.println("FINAL_TEMP_PATH " + FINAL_TEMP_PATH);
 	}
 
 	public static Path tryGetPath(String stringPath) {

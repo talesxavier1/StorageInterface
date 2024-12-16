@@ -32,6 +32,16 @@ public class Utils {
 	public static String getCurrentOSSeparator() {
 		return System.getProperty("file.separator");
 	}
+
+	public static String getOSTempDir() {
+		OSEnum os = getCurrentOS();
+		var tempPath = System.getProperty("java.io.tmpdir");
+		if (os == OSEnum.LINUX) {
+			return tempPath + getCurrentOSSeparator();
+		} else {
+			return tempPath;
+		}
+	}
 }
 
 enum OSEnum {

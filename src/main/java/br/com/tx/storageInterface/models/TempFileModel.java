@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "TempFiles")
 public class TempFileModel extends FileModel implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private String tempDirID;
 	private Date tempDirDate;
 
