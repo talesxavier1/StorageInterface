@@ -41,7 +41,15 @@ public class GoogleDrive {
 	}
 
 	public String downloadFile(String driveFileID, String fileName) {
-		
+		if (fileName == null) {
+			System.out.println("GoogleDrive.downloadFile() -  file name não passado.");
+			fileName = UUID.randomUUID().toString();
+		}
+
+		if (driveFileID == null) {
+			throw new NullPointerException("driveFileID nulo.");
+		}
+
 		String tempFIlePath = null;
 		try {
 			String cachedContent = (String) redisTemplate.opsForValue().get("FILE-B64-" + driveFileID);
@@ -116,6 +124,7 @@ public class GoogleDrive {
 		return uploadResult.getId();
 
 	}
+
 
 	public boolean fileExistInDrive(String fileMD5Hash) {
 		var fileModel = dbService.getDriveFileInfoRepository().countByFileHash(fileMD5Hash);

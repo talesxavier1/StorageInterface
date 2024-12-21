@@ -104,6 +104,9 @@ public class FileManagerController {
 				response.setSuccess(false);
 				response.setErrorText("Não foi possível fazer o upload do arquivo.");
 			}
+		} else if (command == FileManagerPostComandEum.UpdateFileContent) {
+			boolean result = this.fileManagerService.UpdateFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
+
 		}
 
 		return ResponseEntity.status(HttpStatus.OK).body(response);

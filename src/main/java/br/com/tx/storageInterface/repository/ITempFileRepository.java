@@ -22,6 +22,9 @@ public interface ITempFileRepository extends MongoRepository<TempFileModel, Stri
 	@Query(value = "{ 'tempDirID': ?0 }", delete = true)
 	public void deleteByTempDirId(String tempDirID);
 	
+//	@Query(value = "{ 'keyID': ?0, 'tempDirID': ?1}", delete = true)
+//	public void deleteByKeyIDAndTempDirId(String keyID, String tempDirID);
+
 	@Query(value = "{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3, 'tempDirID': ?4, 'fileInfoModel.deleted': false, 'isDirectory': true }", count = true)
 	public long countByParentKey(String processID, String processVersionID, String packageID, String parentKey, String tempDirID);
 
