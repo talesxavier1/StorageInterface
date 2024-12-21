@@ -24,6 +24,7 @@ public class FileModel implements Serializable {
 	@JsonProperty(access = Access.WRITE_ONLY)
 	private FileInfoModel fileInfoModel;
 
+	/* Sequência de keyIDs do pai até o filhor {avô}/{pai}/{keyID} */
 	private String key;
 	private String name;
 	private Date dateCreated;

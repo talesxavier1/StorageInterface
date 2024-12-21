@@ -226,7 +226,7 @@ public class FileManagerService {
 		return true;
 	}
 
-//	@Transactional(rollbackFor = Exception.class)
+	@Transactional(rollbackFor = Exception.class)
 	public boolean logicalDeletion(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = pathInfoModels[pathInfoModels.length - 1].getKey();
@@ -458,6 +458,36 @@ public class FileManagerService {
 			return null;
 		}
 		return tempFilePath;
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	public boolean UpdateFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+
+		try {
+			PathInfoModel[] infoModels = argumentsModel.getPathInfo();
+			PathInfoModel pathInfoModel = infoModels[infoModels.length - 1];
+			String fileKey = pathInfoModel.getKey();
+			String[] fileKeySplit = fileKey.split("/");
+			String fileKeyID = fileKeySplit[fileKeySplit.length - 1];
+
+			TempFileModel tempFile = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
+			if (tempFile == null) {
+				throw new Exception("Não foi possível encontrar tempFile.");
+			}
+
+			GoogleDrive drive = new GoogleDrive(null);
+			String fileDriveID = drive.uploadFile(chunk, argumentsModel.getClassChunkMetadata().getFileName());
+			tempFile.getFileInfoModel().setFileDriveID(fileDriveID);
+
+			this.dbService.getTempFileRepository().save(tempFile);
+
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+			return false;
+		}
+
 	}
 
 	public void insertFilelHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
