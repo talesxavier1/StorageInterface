@@ -88,6 +88,7 @@ public class FilesUtils {
 		File directory = new File(TEMP_DIR_PATH + SEPARATOR + TEMP_FOLDER_NAME);
 		if (!directory.exists()) {
 			directory.mkdir();
+			System.out.println("Diretório temporario " + FINAL_TEMP_PATH);
 		}
 	}
 
@@ -99,7 +100,7 @@ public class FilesUtils {
 	}
 
 	private static String createFile(String fileName, byte[] fileBytes) {
-		String filePath = FINAL_TEMP_PATH + SEPARATOR + fileName;
+		String filePath = FINAL_TEMP_PATH + SEPARATOR + UUID.randomUUID().toString() + fileName;
 		File file = new File(filePath);
 
 		try (var os = new FileOutputStream(file)) {
@@ -112,7 +113,7 @@ public class FilesUtils {
 	}
 
 	private static String createJsonFile(String fileName, String jsonString, Object object) {
-		String filePath = FINAL_TEMP_PATH + SEPARATOR + fileName;
+		String filePath = FINAL_TEMP_PATH + SEPARATOR + UUID.randomUUID().toString() + fileName;
 		if (jsonString != null) {
 			JsonElement jsonElement = JsonParser.parseString(jsonString);
 

@@ -14,33 +14,41 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.Permission;
 
 import br.com.tx.storageInterface.SpringContext;
 import br.com.tx.storageInterface.Utils.FileHashUtil;
 import br.com.tx.storageInterface.Utils.FilesUtils;
+import br.com.tx.storageInterface.drivers.GoogleDriveDrive;
 import br.com.tx.storageInterface.models.DriveFileInfoModel;
 
 
-public class GoogleDrive {
+public class GoogleDriveService {
 
 	private MongoDBService dbService;
-	private Drive googleDriveService;
+	private Drive googleDriveDrive;
 	private String defaultAccout;
 	private RedisTemplate<String, String> redisTemplate;
 
-	public GoogleDrive(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
+	public GoogleDriveService(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
-
 		this.defaultAccout = "npcpk1999.drive01@gmail.com";
 
-		this.googleDriveService = GoogleDriveService.getGoogleDriveService(this.defaultAccout);
+		this.googleDriveDrive = GoogleDriveDrive.getDrive(this.defaultAccout);
 
 		this.redisTemplate = redisTemplate;
 	}
 
 	public String downloadFile(String driveFileID, String fileName) {
+
+		if (fileName == null) {
+			DriveFileInfoModel driveFileInfo = this.dbService.getDriveFileInfoRepository().findBy_id(driveFileID);
+			if (driveFileInfo == null) {
+				throw new NullPointerException("DriveFileInfoModel não encontrado.");
+			}
+			fileName = driveFileInfo.getFileName();
+		}
+
 		if (fileName == null) {
 			System.out.println("GoogleDrive.downloadFile() -  file name não passado.");
 			fileName = UUID.randomUUID().toString();
@@ -58,7 +66,7 @@ public class GoogleDrive {
 				tempFIlePath = FilesUtils.createTempFile(fileName, bContent, 60);
 			} else {
 				ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-				googleDriveService.files().get(driveFileID).executeMediaAndDownloadTo(outputStream);
+				googleDriveDrive.files().get(driveFileID).executeMediaAndDownloadTo(outputStream);
 				byte[] fileContent = outputStream.toByteArray();
 
 				tempFIlePath = FilesUtils.createTempFile(fileName, fileContent, 60);
@@ -82,7 +90,7 @@ public class GoogleDrive {
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		try {
-			this.googleDriveService.files().get(fileID).executeMediaAndDownloadTo(outputStream);
+			this.googleDriveDrive.files().get(fileID).executeMediaAndDownloadTo(outputStream);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return "";
@@ -109,10 +117,10 @@ public class GoogleDrive {
 
 		FileContent mediaContent = new FileContent(chunk.getContentType(), file);
 
-		var uploadResult = this.googleDriveService.files().create(fileMetadata, mediaContent).setFields("id").execute();
+		var uploadResult = this.googleDriveDrive.files().create(fileMetadata, mediaContent).setFields("id").execute();
 
-		Permission permission = new Permission().setType("user").setRole("writer").setEmailAddress("npcpk1999.drive01@gmail.com");
-		this.googleDriveService.permissions().create(uploadResult.getId(), permission).setFields("id").execute();
+//		Permission permission = new Permission().setType("user").setRole("writer").setEmailAddress("npcpk1999.drive01@gmail.com");
+//		this.googleDriveDrive.permissions().create(uploadResult.getId(), permission).setFields("id").execute();
 		FilesUtils.tryDeleteFile(tempFileDir);
 		
 		var newDriveFileInfo = new DriveFileInfoModel();
@@ -120,11 +128,11 @@ public class GoogleDrive {
 		newDriveFileInfo.set_id(uploadResult.getId());
 		newDriveFileInfo.setFileName(newFileName);
 		this.dbService.getDriveFileInfoRepository().insert(newDriveFileInfo);
+
 		
 		return uploadResult.getId();
 
 	}
-
 
 	public boolean fileExistInDrive(String fileMD5Hash) {
 		var fileModel = dbService.getDriveFileInfoRepository().countByFileHash(fileMD5Hash);

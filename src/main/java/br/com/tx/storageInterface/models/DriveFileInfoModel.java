@@ -3,6 +3,10 @@ package br.com.tx.storageInterface.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import br.com.tx.storageInterface.enums.DriveContextEnum;
+
+
+
 @Document(collection = "DriveFileInfo")
 public class DriveFileInfoModel {
 
@@ -10,8 +14,8 @@ public class DriveFileInfoModel {
 	private String _id;
 	private String fileHash;
 	private String defaultAccount;
-	private String serviceAccount;
 	private String fileName;
+	private DriveContextEnum driveContext;
 
 	public String getDefaultAccount() {
 		return defaultAccount;
@@ -19,14 +23,6 @@ public class DriveFileInfoModel {
 
 	public void setDefaultAccount(String contaPrincipal) {
 		this.defaultAccount = contaPrincipal;
-	}
-
-	public String getServiceAccount() {
-		return serviceAccount;
-	}
-
-	public void setServiceAccount(String contaDeServico) {
-		this.serviceAccount = contaDeServico;
 	}
 
 	public String getFileHash() {
@@ -53,4 +49,12 @@ public class DriveFileInfoModel {
 		this.fileName = fileName;
 	}
 
+	public DriveContextEnum getDriveContext() {
+		return driveContext;
+	}
+
+	public void setDriveContext(DriveContextEnum driveContext) {
+		this.driveContext = driveContext;
+	}
 }
+

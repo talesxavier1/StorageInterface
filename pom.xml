@@ -94,7 +94,18 @@
 			<artifactId>google-api-services-drive</artifactId>
 			<version>v3-rev20220815-2.0.0</version>
 		</dependency>
+<dependency>
+    <groupId>com.google.apis</groupId>
+    <artifactId>google-api-services-gmail</artifactId>
+    <version>v1-rev20240520-2.0.0</version>
+</dependency>
 		<!-- ////////// Google ////////// -->
+		
+		<dependency>
+    <groupId>com.sun.mail</groupId>
+    <artifactId>jakarta.mail</artifactId>
+    <version>1.6.7</version>
+</dependency>
 		
 		
 		<!-- ////////// Jasypt ////////// -->
@@ -105,6 +116,11 @@
 		</dependency>
 		<!-- ////////// Jasypt ////////// -->
 		
+		<dependency>
+		    <groupId>org.apache.tika</groupId>
+		    <artifactId>tika-core</artifactId>
+		    <version>2.7.0</version>
+		</dependency>
 		
 	</dependencies>
 	<build>

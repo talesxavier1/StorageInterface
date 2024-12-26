@@ -25,4 +25,14 @@ public class FileHashUtil {
 		return sb.toString();
 	}
 
+	public static String generateMD5Hash(String value) throws IOException, NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("MD5");
+		byte[] messageDigest = md.digest(value.getBytes());
+		StringBuilder hexString = new StringBuilder();
+		for (byte b : messageDigest) {
+			hexString.append(String.format("%02x", b));
+		}
+		return hexString.toString();
+	}
+
 }
