@@ -99,7 +99,7 @@ public class FileManagerController {
 		argumentsModel.init();
 
 		if (command == FileManagerPostComandEum.UploadChunk) {
-			boolean result = this.fileManagerService.UploadChunk(argumentsModel, chunk , processID, processVersionID, packageID, tempDirID);
+			boolean result = this.fileManagerService.uploadChunk(argumentsModel, chunk , processID, processVersionID, packageID, tempDirID);
 			if (!result) {
 				response.setSuccess(false);
 				response.setErrorText("Não foi possível fazer o upload do arquivo.");

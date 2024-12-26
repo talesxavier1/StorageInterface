@@ -1,19 +1,70 @@
 package br.com.tx.storageInterface.models;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "DriveConfigs")
-public class DriveConfigsModel {
+public class DriveConfigsModel implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	@Id
 	private String _id;
 
 	private String emailContaPrincipal;
-	private String emailContaServico;
-	private String strJsonClientSecret;
+	private String scope;
+	private String refreshToken;
+	private long expiresIn;
+	private long tokenGeneratedTimestamp;
+	private String accessToken;
+	private String clientID;
+	private String clientSecret;
+
+	public String getClientID() {
+		return clientID;
+	}
+
+	public void setClientID(String clientID) {
+		this.clientID = clientID;
+	}
+
+	public String getClientSecret() {
+		return clientSecret;
+	}
+
+	public void setClientSecret(String clientSecret) {
+		this.clientSecret = clientSecret;
+	}
+
+	public String getScope() {
+		return scope;
+	}
+
+	public void setScope(String scope) {
+		this.scope = scope;
+	}
+
+	public String getRefreshToken() {
+		return refreshToken;
+	}
+
+	public void setRefreshToken(String refreshToken) {
+		this.refreshToken = refreshToken;
+	}
+
+
+
+
+	public String getAccessToken() {
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
 
 	public DriveConfigsModel() {
 		this._id = UUID.randomUUID().toString();
@@ -35,19 +86,19 @@ public class DriveConfigsModel {
 		this.emailContaPrincipal = emailContaPrincipal;
 	}
 
-	public String getEmailContaServico() {
-		return emailContaServico;
+	public long getTokenGeneratedTimestamp() {
+		return tokenGeneratedTimestamp;
 	}
 
-	public void setEmailContaServico(String emailContaServico) {
-		this.emailContaServico = emailContaServico;
+	public void setTokenGeneratedTimestamp(long tokenGeneratedTimestamp) {
+		this.tokenGeneratedTimestamp = tokenGeneratedTimestamp;
 	}
 
-	public String getStrJsonClientSecret() {
-		return strJsonClientSecret;
+	public long getExpiresIn() {
+		return expiresIn;
 	}
 
-	public void setStrJsonClientSecret(String strJsonClientSecret) {
-		this.strJsonClientSecret = strJsonClientSecret;
+	public void setExpiresIn(long expiresIn) {
+		this.expiresIn = expiresIn;
 	}
 }

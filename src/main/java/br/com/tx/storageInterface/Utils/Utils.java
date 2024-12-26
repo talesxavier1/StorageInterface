@@ -1,8 +1,13 @@
 package br.com.tx.storageInterface.Utils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
+
+import org.apache.tika.Tika;
+import org.springframework.web.multipart.MultipartFile;
 
 public class Utils {
 
@@ -41,6 +46,18 @@ public class Utils {
 		} else {
 			return tempPath;
 		}
+	}
+
+	public static String getFileMimeType(MultipartFile file) throws IOException {
+		Tika tika = new Tika();
+		String mimeType = tika.detect(file.getInputStream());
+		return mimeType;
+	}
+
+	public static String getFileMimeType(InputStream inputStream) throws IOException {
+		Tika tika = new Tika();
+		String mimeType = tika.detect(inputStream);
+		return mimeType;
 	}
 }
 

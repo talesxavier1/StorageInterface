@@ -2,6 +2,8 @@ package br.com.tx.storageInterface.models;
 
 import java.io.Serializable;
 
+import br.com.tx.storageInterface.enums.DriveContextEnum;
+
 public class FileInfoModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -13,18 +15,8 @@ public class FileInfoModel implements Serializable {
 	private boolean deleted;
 	private String parentKey;
 	private String fileDriveID;
+	private DriveContextEnum storageType;
 
-//	private boolean isTempDir;
-//	private String tempDirID;
-//	private Date tempDirDate;
-
-//	public String getTempDirID() {
-//		return tempDirID;
-//	}
-//
-//	public void setTempDirID(String tempDirID) {
-//		this.tempDirID = tempDirID;
-//	}
 
 	public static long getSerialversionuid() {
 		return serialVersionUID;
@@ -108,6 +100,14 @@ public class FileInfoModel implements Serializable {
 
 	public void setPackageVersionID(String packageVersionID) {
 		this.packageVersionID = packageVersionID;
+	}
+
+	public DriveContextEnum getStorageType() {
+		return storageType;
+	}
+
+	public void setStorageType(DriveContextEnum storageType) {
+		this.storageType = storageType;
 	}
 
 }

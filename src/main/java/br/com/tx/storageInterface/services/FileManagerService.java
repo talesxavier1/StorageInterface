@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import javax.naming.directory.NoSuchAttributeException;
 
+import org.apache.avalon.framework.parameters.ParameterException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mock.web.MockMultipartFile;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.google.gson.Gson;
 
 import br.com.tx.storageInterface.Utils.Utils;
+import br.com.tx.storageInterface.enums.DriveContextEnum;
 import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.ChunkMetadataModel;
 import br.com.tx.storageInterface.models.FileInfoModel;
@@ -189,8 +191,8 @@ public class FileManagerService {
 			}
 			
 			try {
-				GoogleDrive drive = new GoogleDrive(redisTemplate);
-				String result = drive.getFileContent(fileModel.getFileInfoModel().getFileDriveID());
+				GoogleGmailService drive = new GoogleGmailService(redisTemplate);
+				String result = drive.getMessage(fileModel.getFileInfoModel().getFileDriveID());
 				return result;
 			} catch (GeneralSecurityException | IOException e) {
 				e.printStackTrace();
@@ -364,7 +366,7 @@ public class FileManagerService {
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public boolean UploadChunk(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean uploadChunk(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
 		try {
 			if (argumentsModel.getClassChunkMetadata().getTotalCount() > 1) {
 				this.appendPartChunck(chunk, argumentsModel.getClassChunkMetadata());
@@ -377,9 +379,25 @@ public class FileManagerService {
 				chunk = getMergedChunksParts(argumentsModel.getClassChunkMetadata().getUploadId(), chunk);
 			}
 			
+			String mimeType = Utils.getFileMimeType(chunk);
 
-			GoogleDrive drive = new GoogleDrive(null);
-			String fileDriveID = drive.uploadFile(chunk, argumentsModel.getClassChunkMetadata().getFileName());
+			String fileDriveID = null;
+			String storageDefaultAccout = null;
+			DriveContextEnum storageType = null;
+			if (mimeType.contains("text")) {
+				GoogleGmailService drive = new GoogleGmailService(null);
+				var bChuk = chunk.getBytes();
+				var strChunk = new String(bChuk, "UTF-8");
+
+				fileDriveID = drive.addMessage(strChunk, argumentsModel.getClassChunkMetadata().getFileName());
+				storageDefaultAccout = drive.getDefaultAccout();
+				storageType = DriveContextEnum.GOOGLE_GMAIL;
+			} else {
+				GoogleDriveService drive = new GoogleDriveService(null);
+				fileDriveID = drive.uploadFile(chunk, argumentsModel.getClassChunkMetadata().getFileName());
+				storageDefaultAccout = drive.getDefaultAccout();
+				storageType = DriveContextEnum.GOOGLE_DRIVE;
+			}
 
 			PathInfoModel destinationPathInfoModel = null;
 			if (argumentsModel.getDestinationPathInfo().length > 0) {
@@ -392,8 +410,9 @@ public class FileManagerService {
 			newFileInfoModel.setProcessID(processID);
 			newFileInfoModel.setProcessVersionID(processVersionID);
 			newFileInfoModel.setPackageID(packageID);
-			newFileInfoModel.setDefaultAccount(drive.getDefaultAccout());
+			newFileInfoModel.setDefaultAccount(storageDefaultAccout);
 			newFileInfoModel.setDeleted(false);
+			newFileInfoModel.setStorageType(storageType);
 			
 			if (destinationPathInfoModel != null) {
 				newFileInfoModel.setParentKey(destinationPathInfoModel.getKey());
@@ -437,22 +456,30 @@ public class FileManagerService {
 		
 		String driveFileID = null;
 		String fileName = null;
+		DriveContextEnum storageType = null;
 		
 		TempFileModel tempFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
 		if(tempFileModel != null) {
 			driveFileID = tempFileModel.getFileInfoModel().getFileDriveID();
 			fileName = tempFileModel.getName();
+			storageType = tempFileModel.getFileInfoModel().getStorageType();
 		} else {
 			FileModel fileModel = this.dbService.getFilesRepository().findByKeyID(fileKeyID);
 			driveFileID = fileModel.getFileInfoModel().getFileDriveID();
 			fileName = fileModel.getName();
+			storageType = fileModel.getFileInfoModel().getStorageType();
 		}
 
 
 		String tempFilePath = null;
 		try {
-			GoogleDrive drive = new GoogleDrive(redisTemplate);
-			tempFilePath = drive.downloadFile(driveFileID, fileName);
+			if (storageType == DriveContextEnum.GOOGLE_DRIVE) {
+				GoogleDriveService drive = new GoogleDriveService(redisTemplate);
+				tempFilePath = drive.downloadFile(driveFileID, fileName);
+			} else if (storageType == DriveContextEnum.GOOGLE_GMAIL) {
+				GoogleGmailService gmailService = new GoogleGmailService(redisTemplate);
+				tempFilePath = gmailService.getMessageFile(driveFileID, fileName);
+			}
 		} catch (GeneralSecurityException | IOException e) {
 			e.printStackTrace();
 			return null;
@@ -475,8 +502,16 @@ public class FileManagerService {
 				throw new Exception("Não foi possível encontrar tempFile.");
 			}
 
-			GoogleDrive drive = new GoogleDrive(null);
-			String fileDriveID = drive.uploadFile(chunk, argumentsModel.getClassChunkMetadata().getFileName());
+			String mimeType = Utils.getFileMimeType(chunk);
+			if (!mimeType.contains("text")) {
+				throw new ParameterException("Não é possível atializar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
+			}
+
+			GoogleGmailService drive = new GoogleGmailService(null);
+			var bChuk = chunk.getBytes();
+			var strChunk = new String(bChuk, "UTF-8");
+
+			var fileDriveID = drive.addMessage(strChunk, argumentsModel.getClassChunkMetadata().getFileName());
 			tempFile.getFileInfoModel().setFileDriveID(fileDriveID);
 
 			this.dbService.getTempFileRepository().save(tempFile);
