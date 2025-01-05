@@ -27,6 +27,7 @@ import com.google.gson.Gson;
 import br.com.tx.storageInterface.Utils.Utils;
 import br.com.tx.storageInterface.enums.FileManagerGetComandEum;
 import br.com.tx.storageInterface.enums.FileManagerPostComandEum;
+import br.com.tx.storageInterface.enums.ScriptModuleTypeEnum;
 import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.FileModel;
 import br.com.tx.storageInterface.models.ResponseContentModel;
@@ -50,28 +51,28 @@ public class FileManagerController {
 			@RequestHeader String packageID,
 			@RequestHeader String packageVersionID,
 			@RequestParam String arguments,
-			@RequestHeader(required = false) String tempDirID
+			@RequestHeader(required = false) String tempDirID,
+			@RequestHeader(required = false) ScriptModuleTypeEnum scriptModule
 	) {
 		ResponseContentModel response = new ResponseContentModel();
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
 
 		if (command == FileManagerGetComandEum.GetDirContents) {
-			
-			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID);
+			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, scriptModule);
 			boolean tempDirExist = this.fileManagerService.tempDirExist(tempDirID);
 			if (tempResult.length > 0 || tempDirExist) {
 				response.setSuccess(true);
 				response.setResult(tempResult);
 			} else {
-				FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID);
+				FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID, scriptModule);
 				response.setSuccess(true);
 				response.setResult(result);
 				
-				if (Utils.stringHasValue(tempDirID) && result.length > 0) {
+				/* Cria o doiretorio temporário somente quando é FILE_MANAGER. pq quando é script único, a função de SaveUniqueFileContent já salva o script como temporário.*/
+				if (Utils.stringHasValue(tempDirID) && result.length > 0 && scriptModule == ScriptModuleTypeEnum.FILE_MANAGER) {
 					this.fileManagerService.createTempDirContent(processID, processVersionID, packageID, packageVersionID, tempDirID);
 				}
-
 			}
 		}
 
@@ -98,17 +99,19 @@ public class FileManagerController {
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
 
+		boolean result = false;
 		if (command == FileManagerPostComandEum.UploadChunk) {
-			boolean result = this.fileManagerService.uploadChunk(argumentsModel, chunk , processID, processVersionID, packageID, tempDirID);
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível fazer o upload do arquivo.");
-			}
+			result = this.fileManagerService.uploadChunk(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
 		} else if (command == FileManagerPostComandEum.UpdateFileContent) {
-			boolean result = this.fileManagerService.UpdateFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
-
+			result = this.fileManagerService.updateFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
+		} else if (command == FileManagerPostComandEum.SaveUniqueFileContent) {
+			result = this.fileManagerService.saveFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
 		}
 
+		if (!result) {
+			response.setSuccess(false);
+			response.setErrorText("Não foi possível fazer o upload do arquivo.");
+		}
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
@@ -136,7 +139,6 @@ public class FileManagerController {
 		return ResponseEntity.ok().headers(headers).contentLength(file.length()).body(resource);
 	}
 	
-
 	@PostMapping(value = "/")
 	@Transactional
 	public ResponseEntity<ResponseContentModel> fileManagerPost(

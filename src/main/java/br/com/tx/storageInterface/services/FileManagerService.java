@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 
 import br.com.tx.storageInterface.Utils.Utils;
 import br.com.tx.storageInterface.enums.DriveContextEnum;
+import br.com.tx.storageInterface.enums.ScriptModuleTypeEnum;
 import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.ChunkMetadataModel;
 import br.com.tx.storageInterface.models.FileInfoModel;
@@ -60,6 +61,7 @@ public class FileManagerService {
 		newTempFileModel.setIsDirectory(true);
 		newTempFileModel.setSize(0);
 		newTempFileModel.setHasSubDirectories(false);
+		newTempFileModel.setScriptUnique(false);
 		
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String parentKey = null;
@@ -96,7 +98,7 @@ public class FileManagerService {
 		return true;
 	}
 	
-	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID) {
+	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule) {
 		try {
 			PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 			String key = "";
@@ -104,7 +106,14 @@ public class FileManagerService {
 				key = pathInfoModels[pathInfoModels.length - 1].getKey();
 			}
 
-			FileModel[] result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID);
+			boolean isUniqueScript;
+			if (scriptModule == ScriptModuleTypeEnum.UNIQUE_SCRIPT) {
+				isUniqueScript = true;
+			} else {
+				isUniqueScript = false;
+			}
+
+			FileModel[] result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
 
 			return result;
 		} catch (Exception e) {
@@ -114,7 +123,7 @@ public class FileManagerService {
 		return null;
 	}
 	
-	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule) {
 		try {
 			if (!Utils.stringHasValue(tempDirID)) {
 				return new TempFileModel[0];
@@ -125,7 +134,14 @@ public class FileManagerService {
 				key = pathInfoModels[pathInfoModels.length - 1].getKey();
 			}
 
-			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID);
+			boolean isUniqueScript;
+			if (scriptModule == ScriptModuleTypeEnum.UNIQUE_SCRIPT) {
+				isUniqueScript = true;
+			} else {
+				isUniqueScript = false;
+			}
+
+			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, isUniqueScript);
 
 			return result;
 		} catch (Exception e) {
@@ -421,23 +437,24 @@ public class FileManagerService {
 			}
 			newFileInfoModel.setFileDriveID(fileDriveID);
 
-			TempFileModel newFileModel = new TempFileModel();
-			newFileModel.setFileInfoModel(newFileInfoModel);
-			newFileModel.setKeyID(UUID.randomUUID().toString());
+			TempFileModel newTempFileModel = new TempFileModel();
+			newTempFileModel.setFileInfoModel(newFileInfoModel);
+			newTempFileModel.setKeyID(UUID.randomUUID().toString());
 			if (destinationPathInfoModel != null) {
-				newFileModel.setKey(destinationPathInfoModel.getKey() + "/" + newFileModel.getKeyID());
+				newTempFileModel.setKey(destinationPathInfoModel.getKey() + "/" + newTempFileModel.getKeyID());
 			} else {
-				newFileModel.setKey(newFileModel.getKeyID());
+				newTempFileModel.setKey(newTempFileModel.getKeyID());
 			}
-			newFileModel.setName(argumentsModel.getClassChunkMetadata().getFileName());
-			newFileModel.setDateCreated(Utils.getDateNow());
-			newFileModel.setIsDirectory(false);
-			newFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
-			newFileModel.setHasSubDirectories(false);
-			newFileModel.setTempDirDate(Utils.getDateNow());
-			newFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setName(argumentsModel.getClassChunkMetadata().getFileName());
+			newTempFileModel.setDateCreated(Utils.getDateNow());
+			newTempFileModel.setIsDirectory(false);
+			newTempFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
+			newTempFileModel.setHasSubDirectories(false);
+			newTempFileModel.setTempDirDate(Utils.getDateNow());
+			newTempFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setScriptUnique(false);
 
-			this.dbService.getTempFileRepository().insert(newFileModel);
+			this.dbService.getTempFileRepository().insert(newTempFileModel);
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -488,7 +505,7 @@ public class FileManagerService {
 	}
 
 	@Transactional(rollbackFor = Exception.class)
-	public boolean UpdateFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean updateFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
 
 		try {
 			PathInfoModel[] infoModels = argumentsModel.getPathInfo();
@@ -595,6 +612,52 @@ public class FileManagerService {
 		}
 	}
 
+	public boolean saveFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+		try {
+			String mimeType = Utils.getFileMimeType(chunk);
+			if (!mimeType.contains("text")) {
+				throw new ParameterException("Não é possível atializar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
+			}
+
+			GoogleGmailService drive = new GoogleGmailService(null);
+			var bChuk = chunk.getBytes();
+			var strChunk = new String(bChuk, "UTF-8");
+
+			var fileDriveID = drive.addMessage(strChunk, argumentsModel.getClassChunkMetadata().getFileName());
+
+			FileInfoModel newFileInfoModel = new FileInfoModel();
+			newFileInfoModel.setProcessID(processID);
+			newFileInfoModel.setProcessVersionID(processVersionID);
+			newFileInfoModel.setPackageID(packageID);
+			newFileInfoModel.setDefaultAccount(drive.getDefaultAccout());
+			newFileInfoModel.setDeleted(false);
+			newFileInfoModel.setStorageType(DriveContextEnum.GOOGLE_GMAIL);
+			newFileInfoModel.setParentKey("");
+			newFileInfoModel.setFileDriveID(fileDriveID);
+
+			TempFileModel newTempFileModel = new TempFileModel();
+			newTempFileModel.setFileInfoModel(newFileInfoModel);
+			newTempFileModel.setKeyID(UUID.randomUUID().toString());
+			newTempFileModel.setKey(newTempFileModel.getKeyID());
+			newTempFileModel.setName(argumentsModel.getClassChunkMetadata().getFileName());
+			newTempFileModel.setDateCreated(Utils.getDateNow());
+			newTempFileModel.setIsDirectory(false);
+			newTempFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
+			newTempFileModel.setHasSubDirectories(false);
+			newTempFileModel.setTempDirDate(Utils.getDateNow());
+			newTempFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setScriptUnique(true);
+
+			dbService.getTempFileRepository().save(newTempFileModel);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		return true;
+	}
+
 	// ------------------------------------------------ PRIVATE ------------------------------------------------ //	
 	private FilelHierarchyModel buildFilelHierarchy(String processID, String processVersionID, String packageID, String key, String keyID, String tempDirID) {
 		if (!Utils.stringHasValue(key) && !Utils.stringHasValue(keyID)) {
@@ -661,7 +724,8 @@ public class FileManagerService {
 		
 		return mergedMultipartFile;
 	}
-	
+
+
 
 
 	

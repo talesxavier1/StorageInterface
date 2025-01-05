@@ -37,6 +37,7 @@ public class GoogleCredentialService {
 			builder.setJsonFactory(GsonFactory.getDefaultInstance());
 			builder.setClientSecrets(config.getClientID(), config.getClientSecret());
 
+
 			Credential credential = builder.build();
 			credential.setRefreshToken(config.getRefreshToken());
 
