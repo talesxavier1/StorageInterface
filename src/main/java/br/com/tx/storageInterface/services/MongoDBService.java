@@ -19,12 +19,14 @@ public class MongoDBService {
 	private ITempChunckPartInfoRepository tempChunckPartInfoRepository;
 	private ITempFileRepository tempFileRepository;
 
+
 	@Autowired
 	public MongoDBService(
 			IDriveConfigsRepository driveConfigsRepository, 
 			IFilesRepository filesRepository,
 			IDriveFileInfoRepository driveFileInfoRepository, 
-			ITempChunckPartInfoRepository tempChunckPartInfoRepository, ITempFileRepository tempFileRepository
+			ITempChunckPartInfoRepository tempChunckPartInfoRepository, 
+			ITempFileRepository tempFileRepository
 	) {
 		this.driveConfigsRepository = driveConfigsRepository;
 		this.filesRepository = filesRepository;
@@ -52,4 +54,6 @@ public class MongoDBService {
 	public ITempFileRepository getTempFileRepository() {
 		return tempFileRepository;
 	}
+
+
 }

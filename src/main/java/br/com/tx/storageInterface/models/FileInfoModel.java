@@ -17,7 +17,6 @@ public class FileInfoModel implements Serializable {
 	private String fileDriveID;
 	private DriveContextEnum storageType;
 
-
 	public static long getSerialversionuid() {
 		return serialVersionUID;
 	}
@@ -78,21 +77,6 @@ public class FileInfoModel implements Serializable {
 		this.fileDriveID = fileDriveID;
 	}
 
-//	public Date getTempDirDate() {
-//		return tempDirDate;
-//	}
-//
-//	public void setTempDirDate(Date tempDirDate) {
-//		this.tempDirDate = tempDirDate;
-//	}
-//
-//	public boolean getIsTempDir() {
-//		return isTempDir;
-//	}
-//
-//	public void setIsTempDir(boolean isTempDir) {
-//		this.isTempDir = isTempDir;
-//	}
 
 	public String getPackageVersionID() {
 		return packageVersionID;

@@ -31,6 +31,7 @@ public class FileModel implements Serializable {
 	private boolean isDirectory;
 	private long size;
 	private boolean hasSubDirectories;
+	private boolean isScriptUnique;
 
 	public FileModel() {
 		this._id = UUID.randomUUID().toString();
@@ -103,5 +104,13 @@ public class FileModel implements Serializable {
 
 	public void set_id(String _id) {
 		this._id = _id;
+	}
+
+	public boolean isScriptUnique() {
+		return isScriptUnique;
+	}
+
+	public void setScriptUnique(boolean isScriptUnique) {
+		this.isScriptUnique = isScriptUnique;
 	}
 }
