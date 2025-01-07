@@ -35,11 +35,18 @@ import br.com.tx.storageInterface.models.TempFileModel;
 @Service
 public class FileManagerService {
 	
-	@Autowired
-	private MongoDBService dbService;
-	@Autowired
-	private RedisTemplate<String, String> redisTemplate;
-	
+	/**
+	 * Função responsável por criar um registro que represente um novo doretório.
+	 * Também atualiza o diretório pai, caso haja.
+	 * 
+	 * @param argumentsModel   Argumentos.
+	 * @param processID        ID do processo atual.
+	 * @param processVersionID ID da versão do processo atual.
+	 * @param packageID        ID do pacote ou atividade atual.
+	 * @param packageVersionID ID da versão do pacote ou atividade atual.
+	 * @param tempDirID        ID do doretorio temporário.
+	 * @return Quando o diretório é criado retorna true
+	 */
 	@Transactional(rollbackFor = Exception.class)
 	public boolean createDir(ArgumentsModel argumentsModel, String processID, String processVersionID , String packageID, String packageVersionID, String tempDirID) {
 		
@@ -66,19 +73,24 @@ public class FileManagerService {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String parentKey = null;
 		String parentKeyID = null;
+		/* Quando tem array de pathInfo, isso significa que o novo diretório é filho de algum outro diretório. */
 		if (pathInfoModels.length > 0) {
-			parentKey = pathInfoModels[pathInfoModels.length - 1].getKey();
+			parentKey = pathInfoModels[pathInfoModels.length - 1].getKey(); /* parentKey é sempre a última Key do array de PathInfo. */
 			String[] parentKeySplit = parentKey.split("/");
-			parentKeyID = parentKeySplit[parentKeySplit.length - 1];
+			parentKeyID = parentKeySplit[parentKeySplit.length - 1]; /* parentKeyID é sempre o último ID da sequecial de IDS separados por barra. */
 			newFileInfoModel.setParentKey(parentKey);
-
+			
+			/* A key do novo diretório é formada pela key do diretório pai mais o keyID (UUID novo) do diretorio que está sendo criado.*/
 			newTempFileModel.setKey(String.format("%s/%s", parentKey, newTempFileModel.getKeyID()));
-		} else {
+		} 
+		/* Quando não tem pathInfo significa que o novo diretório não tem um diretório pai.*/
+		else {
 			newFileInfoModel.setParentKey("");
 			newTempFileModel.setKey(newTempFileModel.getKeyID());
 		}
 
 		try {
+			/* Se o novo diretório tem um diretório pai, o diretório pai é atualizado com a informação que existe um doretório filho.*/
 			boolean haveParentID = Utils.stringHasValue(parentKeyID);
 			if (haveParentID) {
 				TempFileModel parentFileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentKeyID, tempDirID);
@@ -88,10 +100,12 @@ public class FileManagerService {
 				parentFileModel.setHasSubDirectories(true);
 				dbService.getTempFileRepository().save(parentFileModel);
 			}
-
+			
+			
 			dbService.getTempFileRepository().insert(newTempFileModel);
 		} catch (Exception e) {
 			e.printStackTrace();
+			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
 			return false;
 		}
 
@@ -99,32 +113,26 @@ public class FileManagerService {
 	}
 	
 	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule) {
-		try {
-			PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
-			String key = "";
-			if (pathInfoModels.length > 0) {
-				key = pathInfoModels[pathInfoModels.length - 1].getKey();
-			}
-
-			boolean isUniqueScript;
-			if (scriptModule == ScriptModuleTypeEnum.UNIQUE_SCRIPT) {
-				isUniqueScript = true;
-			} else {
-				isUniqueScript = false;
-			}
-
-			FileModel[] result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
-
-			return result;
-		} catch (Exception e) {
-			e.printStackTrace();
+		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
+		String key = "";
+		if (pathInfoModels.length > 0) {
+			key = pathInfoModels[pathInfoModels.length - 1].getKey();
 		}
 
-		return null;
+		boolean isUniqueScript;
+		if (scriptModule == ScriptModuleTypeEnum.UNIQUE_SCRIPT) {
+			isUniqueScript = true;
+		} else {
+			isUniqueScript = false;
+		}
+
+		FileModel[] result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
+
+		return result;
 	}
 	
 	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule) {
-		try {
+
 			if (!Utils.stringHasValue(tempDirID)) {
 				return new TempFileModel[0];
 			}
@@ -144,12 +152,6 @@ public class FileManagerService {
 			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, isUniqueScript);
 
 			return result;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return null;
-		
 	}
 
 	public boolean tempDirExist(String tempDirID) {
@@ -179,9 +181,9 @@ public class FileManagerService {
 		return true;
 	}
 
-	public String getFileContent(ArgumentsModel argumentsModel, String tempDirID) {
+	public String getFileContent(ArgumentsModel argumentsModel, String tempDirID) throws NoSuchAttributeException, GeneralSecurityException, IOException {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
-		try {
+
 			String keyID = null;
 			if (pathInfoModels.length > 0) {
 				String key = pathInfoModels[pathInfoModels.length - 1].getKey();
@@ -206,20 +208,9 @@ public class FileManagerService {
 				throw new NoSuchAttributeException("Não foi possível obter o fileDriveID do fileModel _id: " + fileModel.get_id());
 			}
 			
-			try {
-				GoogleGmailService drive = new GoogleGmailService(redisTemplate);
-				String result = drive.getMessage(fileModel.getFileInfoModel().getFileDriveID());
-				return result;
-			} catch (GeneralSecurityException | IOException e) {
-				e.printStackTrace();
-				return "";
-			}
-
-		} catch (Exception err) {
-			err.printStackTrace();
-			return "";
-		}
-
+			GoogleGmailService drive = new GoogleGmailService(redisTemplate);
+			String result = drive.getMessage(fileModel.getFileInfoModel().getFileDriveID());
+			return result;
 	}
 
 	@Transactional(rollbackFor = Exception.class)
@@ -317,7 +308,6 @@ public class FileManagerService {
 		} catch (Exception e) {
 			e.printStackTrace();
 			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-			return false;
 		}
 
 		return true;
@@ -463,7 +453,7 @@ public class FileManagerService {
 		}
 	}
 	
-	public String download(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public String download(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) throws GeneralSecurityException, IOException {
 
 		PathInfoModel[] infoModels = argumentsModel.getPathInfo();
 		PathInfoModel pathInfoModel = infoModels[infoModels.length - 1];
@@ -489,18 +479,14 @@ public class FileManagerService {
 
 
 		String tempFilePath = null;
-		try {
-			if (storageType == DriveContextEnum.GOOGLE_DRIVE) {
-				GoogleDriveService drive = new GoogleDriveService(redisTemplate);
-				tempFilePath = drive.downloadFile(driveFileID, fileName);
-			} else if (storageType == DriveContextEnum.GOOGLE_GMAIL) {
-				GoogleGmailService gmailService = new GoogleGmailService(redisTemplate);
-				tempFilePath = gmailService.getMessageFile(driveFileID, fileName);
-			}
-		} catch (GeneralSecurityException | IOException e) {
-			e.printStackTrace();
-			return null;
+		if (storageType == DriveContextEnum.GOOGLE_DRIVE) {
+			GoogleDriveService drive = new GoogleDriveService(redisTemplate);
+			tempFilePath = drive.downloadFile(driveFileID, fileName);
+		} else if (storageType == DriveContextEnum.GOOGLE_GMAIL) {
+			GoogleGmailService gmailService = new GoogleGmailService(redisTemplate);
+			tempFilePath = gmailService.getMessageFile(driveFileID, fileName);
 		}
+		
 		return tempFilePath;
 	}
 
@@ -516,7 +502,7 @@ public class FileManagerService {
 
 			TempFileModel tempFile = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
 			if (tempFile == null) {
-				throw new Exception("Não foi possível encontrar tempFile.");
+				throw new NoSuchAttributeException("Não foi possível encontrar tempFile.");
 			}
 
 			String mimeType = Utils.getFileMimeType(chunk);
@@ -612,8 +598,8 @@ public class FileManagerService {
 		}
 	}
 
-	public boolean saveFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
-		try {
+	public boolean saveFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) throws IOException, ParameterException, GeneralSecurityException {
+	
 			String mimeType = Utils.getFileMimeType(chunk);
 			if (!mimeType.contains("text")) {
 				throw new ParameterException("Não é possível atializar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
@@ -650,15 +636,17 @@ public class FileManagerService {
 
 			dbService.getTempFileRepository().save(newTempFileModel);
 
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
+		
 
 		return true;
 	}
 
 	// ------------------------------------------------ PRIVATE ------------------------------------------------ //	
+	@Autowired
+	private MongoDBService dbService;
+	@Autowired
+	private RedisTemplate<String, String> redisTemplate;
+
 	private FilelHierarchyModel buildFilelHierarchy(String processID, String processVersionID, String packageID, String key, String keyID, String tempDirID) {
 		if (!Utils.stringHasValue(key) && !Utils.stringHasValue(keyID)) {
 			throw new NullPointerException("Não é posível busca FileModel. keyID e KEY nulos");
@@ -692,14 +680,9 @@ public class FileManagerService {
 		return newFilelHierarchyModel;
 	}
 
-	private boolean appendPartChunck(MultipartFile chunk, ChunkMetadataModel chunkMetadataModel) {
-		try {
-			chunkMetadataModel.setPartByte(chunk.getBytes());
-			this.dbService.getTempChunckPartInfoRepository().insert(chunkMetadataModel);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return false;
-		}
+	private boolean appendPartChunck(MultipartFile chunk, ChunkMetadataModel chunkMetadataModel) throws IOException {
+		chunkMetadataModel.setPartByte(chunk.getBytes());
+		this.dbService.getTempChunckPartInfoRepository().insert(chunkMetadataModel);
 		return true;
 	}
 
