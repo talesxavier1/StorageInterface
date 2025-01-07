@@ -3,9 +3,13 @@ package br.com.tx.storageInterface.controllers;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.naming.directory.NoSuchAttributeException;
+
+import org.apache.avalon.framework.parameters.ParameterException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -58,27 +62,34 @@ public class FileManagerController {
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
 
-		if (command == FileManagerGetComandEum.GetDirContents) {
-			FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, scriptModule);
-			boolean tempDirExist = this.fileManagerService.tempDirExist(tempDirID);
-			if (tempResult.length > 0 || tempDirExist) {
-				response.setSuccess(true);
-				response.setResult(tempResult);
-			} else {
-				FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID, scriptModule);
-				response.setSuccess(true);
-				response.setResult(result);
-				
-				/* Cria o doiretorio temporário somente quando é FILE_MANAGER. pq quando é script único, a função de SaveUniqueFileContent já salva o script como temporário.*/
-				if (Utils.stringHasValue(tempDirID) && result.length > 0 && scriptModule == ScriptModuleTypeEnum.FILE_MANAGER) {
-					this.fileManagerService.createTempDirContent(processID, processVersionID, packageID, packageVersionID, tempDirID);
+		try {
+			if (command == FileManagerGetComandEum.GetDirContents) {
+				FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, scriptModule);
+				boolean tempDirExist = this.fileManagerService.tempDirExist(tempDirID);
+				if (tempResult.length > 0 || tempDirExist) {
+					response.setSuccess(true);
+					response.setResult(tempResult);
+				} else {
+					FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID, scriptModule);
+					response.setSuccess(true);
+					response.setResult(result);
+
+					/* Cria o doiretorio temporário somente quando é FILE_MANAGER. pq quando é script único, a função de SaveUniqueFileContent já salva o script como temporário. */
+					if (Utils.stringHasValue(tempDirID) && result.length > 0 && scriptModule == ScriptModuleTypeEnum.FILE_MANAGER) {
+						this.fileManagerService.createTempDirContent(processID, processVersionID, packageID, packageVersionID, tempDirID);
+					}
 				}
 			}
-		}
 
-		if (command == FileManagerGetComandEum.GetFileContent) {
-			String result = this.fileManagerService.getFileContent(argumentsModel, tempDirID);
-			response.setStrResult(result);
+			if (command == FileManagerGetComandEum.GetFileContent) {
+
+				String result = this.fileManagerService.getFileContent(argumentsModel, tempDirID);
+				response.setStrResult(result);
+			}
+		} catch (NoSuchAttributeException | GeneralSecurityException | IOException e) {
+			e.printStackTrace();
+			response.setErrorText("Não foi possível consultar o contaúdo.");
+			response.setSuccess(false);
 		}
 
 		return ResponseEntity.status(HttpStatus.OK).body(response);
@@ -98,20 +109,48 @@ public class FileManagerController {
 		ResponseContentModel response = new ResponseContentModel();
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
+		
+		try {
+			if (command == FileManagerPostComandEum.UploadChunk) {
+				try {
+					var result = this.fileManagerService.uploadChunk(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setErrorText("Não foi possível fazer o upload.");
+						response.setSuccess(false);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					throw new Exception("Não foi possível fazer o upload.");
+				}
+			} else if (command == FileManagerPostComandEum.UpdateFileContent) {
+				try {
+					var result = this.fileManagerService.updateFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setErrorText("Não foi possível atualizar o arquivo.");
+						response.setSuccess(false);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					throw new Exception("Não foi possível atualizar o arquivo.");
+				}
+			} else if (command == FileManagerPostComandEum.SaveUniqueFileContent) {
+				try {
+					var result = this.fileManagerService.saveFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setErrorText("Não foi possível salvar o conteúdo.");
+						response.setSuccess(false);
+					}
+				} catch (ParameterException | IOException | GeneralSecurityException e) {
+					e.printStackTrace();
+					throw new Exception("Não foi possível salvar o conteúdo.");
+				}
+			}
 
-		boolean result = false;
-		if (command == FileManagerPostComandEum.UploadChunk) {
-			result = this.fileManagerService.uploadChunk(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
-		} else if (command == FileManagerPostComandEum.UpdateFileContent) {
-			result = this.fileManagerService.updateFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
-		} else if (command == FileManagerPostComandEum.SaveUniqueFileContent) {
-			result = this.fileManagerService.saveFileContent(argumentsModel, chunk, processID, processVersionID, packageID, tempDirID);
-		}
-
-		if (!result) {
+		} catch (Exception e) {
+			response.setErrorText(e.getMessage());
 			response.setSuccess(false);
-			response.setErrorText("Não foi possível fazer o upload do arquivo.");
 		}
+
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}
 	
@@ -122,21 +161,22 @@ public class FileManagerController {
 			@RequestHeader String packageID,
 			@RequestHeader String arguments,
 			@RequestHeader(required = false) String tempDirID
-	) throws IOException {
+	) throws GeneralSecurityException, IOException {
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
-		
-		String tempFilePath = this.fileManagerService.download(argumentsModel, processID, processVersionID, packageID, tempDirID);
-		if (tempFilePath == null) {
+
+		try {
+			String tempFilePath = this.fileManagerService.download(argumentsModel, processID, processVersionID, packageID, tempDirID);
+			
+			File file = new File(tempFilePath);
+			InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+			HttpHeaders headers = new HttpHeaders();
+			headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + argumentsModel.getName());
+
+			return ResponseEntity.ok().headers(headers).contentLength(file.length()).body(resource);
+		} catch (GeneralSecurityException | IOException e) {
 			return ResponseEntity.notFound().build();
 		}
-		
-		File file = new File(tempFilePath);
-		InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
-		HttpHeaders headers = new HttpHeaders();
-		headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + argumentsModel.getName());
-
-		return ResponseEntity.ok().headers(headers).contentLength(file.length()).body(resource);
 	}
 	
 	@PostMapping(value = "/")
@@ -153,62 +193,93 @@ public class FileManagerController {
 		ResponseContentModel response = new ResponseContentModel();
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
 		argumentsModel.init();
+		try {
+			if (command == FileManagerPostComandEum.CreateDir) {
+				try {
+					boolean result = this.fileManagerService.createDir(argumentsModel, processID, processVersionID, packageID, packageVersionID, tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível criar o diretório.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível criar o diretório.");
+				}
+			} else if (command == FileManagerPostComandEum.Rename) {
+				try {
+					boolean result = this.fileManagerService.renameFile(argumentsModel, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível renomear arquivo ou diretório.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível renomear arquivo ou diretório.");
+				}
 
-		if (command == FileManagerPostComandEum.CreateDir) {
-			boolean result = this.fileManagerService.createDir(argumentsModel, processID, processVersionID, packageID, packageVersionID, tempDirID);
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível criar o diretório.");
-			}
-		} else if (command == FileManagerPostComandEum.Rename) {
-			boolean result = this.fileManagerService.renameFile(argumentsModel, processID, processVersionID, packageID, tempDirID);
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível renomear arquivo ou diretório.");
-			}
-		} else if (command == FileManagerPostComandEum.Copy) {
-			boolean result = this.fileManagerService.copy(argumentsModel, processID, processVersionID, packageID, tempDirID);
+			} else if (command == FileManagerPostComandEum.Copy) {
+				try {
+					boolean result = this.fileManagerService.copy(argumentsModel, processID, processVersionID, packageID, tempDirID);
 
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível copiar arquivo ou diretório.");
-			}
-		} else if (command == FileManagerPostComandEum.Remove) {
-			boolean result = this.fileManagerService.logicalDeletion(argumentsModel, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível copiar arquivo ou diretório.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível copiar arquivo ou diretório.");
+				}
+			} else if (command == FileManagerPostComandEum.Remove) {
+				try {
+					boolean result = this.fileManagerService.logicalDeletion(argumentsModel, processID, processVersionID, packageID, tempDirID);
 
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível copiar arquivo ou diretório.");
-			}
-		} else if (command == FileManagerPostComandEum.Move) {
-			boolean result = this.fileManagerService.move(argumentsModel, processID, processVersionID, packageID, tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível copiar arquivo ou diretório.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível copiar arquivo ou diretório.");
+				}
+			} else if (command == FileManagerPostComandEum.Move) {
+				try {
+					boolean result = this.fileManagerService.move(argumentsModel, processID, processVersionID, packageID, tempDirID);
 
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível mover arquivo ou diretório.");
-			}
-		} else if (command == FileManagerPostComandEum.ClearTempDir) {
-			boolean result = this.fileManagerService.deleteTempDir(tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível mover arquivo ou diretório.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível mover arquivo ou diretório.");
+				}
 
-			if (!result) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível deletar diretório temporário.");
-			}
+			} else if (command == FileManagerPostComandEum.ClearTempDir) {
+				try {
+					boolean result = this.fileManagerService.deleteTempDir(tempDirID);
 
-		} else if (command == FileManagerPostComandEum.PubTempDir) {
-			String result = this.fileManagerService.pubTempDir(tempDirID);
+					if (!result) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível deletar diretório temporário.");
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível deletar diretório temporário.");
+				}
+			} else if (command == FileManagerPostComandEum.PubTempDir) {
+				try {
+					String result = this.fileManagerService.pubTempDir(tempDirID);
 
-			if (result == null) {
-				response.setSuccess(false);
-				response.setErrorText("Não foi possível publicar diretório temporário.");
+					if (result == null) {
+						response.setSuccess(false);
+						response.setErrorText("Não foi possível publicar diretório temporário.");
+					} else {
+						Map<String, String> responseMap = new HashMap<String, String>();
+						responseMap.put("newPackageVersionID", result);
+						response.setStrResult(new Gson().toJson(responseMap));
+					}
+				} catch (Exception e) {
+					throw new Exception("Não foi possível publicar diretório temporário.");
+				}
 			}
-			else {
-				Map<String, String> responseMap = new HashMap<String, String>();
-				responseMap.put("newPackageVersionID", result);
-				response.setStrResult(new Gson().toJson(responseMap));
-			}
+		} catch (Exception e) {
+			response.setErrorText(e.getMessage());
+			response.setSuccess(false);
 		}
-
 
 		return ResponseEntity.status(HttpStatus.OK).body(response);
 	}

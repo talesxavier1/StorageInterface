@@ -4,18 +4,56 @@ import java.io.Serializable;
 
 import com.google.gson.Gson;
 
+/**
+ * Modelo que representa o detalhamento do diretório ou arquivo recebido do front.
+ */
 public class ArgumentsModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * Sequencia de PathInfo sendo a última do diretório ou arquivo atual e a
+	 * penúltima a do diretorio pai, caso haja.
+	 */
 	private PathInfoModel[] pathInfo;
+	/**
+	 * Indica se o arquivo é um diretório ou não.
+	 */
 	private boolean isDirectory;
+	/**
+	 * Nome do arquivo ou diretório.
+	 */
 	private String name;
+	/**
+	 * PathInfo informado quando uma ação de movimentação ou cópia de diretório ou arquivo está sendo executado.
+	 * Representa o PathInfo de destino da ação.
+	 */
 	private PathInfoModel[] destinationPathInfo;
+	
+	/**
+	 * PathInfo informado quando uma ação de movimentação ou cópia de diretório ou arquivo está sendo executado.
+	 * Representa o PathInfo de origem da ação.
+	 */
 	private PathInfoModel[] sourcePathInfo;
-	private String chunkMetadata;
-	private ChunkMetadataModel classChunkMetadata;
-	private boolean sourceIsDirectory;
 
+	/**
+	 * Json que representa a classe ChunkMetadataModel.
+	 */
+	private String chunkMetadata;
+	/**
+	 * Classe com o detalhameto do chunk de arquivo enviado.
+	 */
+	private ChunkMetadataModel classChunkMetadata;
+	/**
+	 * Indica que a classe está tratando de um diretório.
+	 */
+	private boolean sourceIsDirectory;
+	
+	/**
+	 * Função responsável por iniciar a classe e tratar de campos que precisem de alguma lógica.
+	 * 
+	 * - Faz o parse do campo chunkMetadata e popula a classe ChunkMetadataModel.
+	 * - Preeche o campo _uploadId da classe ChunkMetadataModel com base no valor do UploadId da propria classe ChunkMetadataModel.
+	 */
 	public void init() {
 		if (chunkMetadata != null) {
 			this.classChunkMetadata = new Gson().fromJson(chunkMetadata, ChunkMetadataModel.class);
