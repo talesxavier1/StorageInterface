@@ -4,17 +4,55 @@ import java.io.Serializable;
 
 import br.com.tx.storageInterface.enums.DriveContextEnum;
 
+/**
+ * Classe responsael por armazenar detalhes da pasta ou arquivo.
+ */
 public class FileInfoModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * ID do processo atual.
+	 */
 	private String processID;
+
+	/**
+	 * ID da versão do processo atual.
+	 */
 	private String processVersionID;
+
+	/**
+	 * ID do pacote ou atividade atual.
+	 */
 	private String packageID;
+
+	/**
+	 * Id da ersão do pacote ou atividade.
+	 */
 	private String packageVersionID;
+
+	/**
+	 * indica em que conta as informações do arquivo foram salvas.
+	 */
 	private String defaultAccount;
+
+	/**
+	 * Indica se o registro foi deletado.
+	 */
 	private boolean deleted;
+
+	/**
+	 * KeyID do diretório pais da pasta ou arquivo.
+	 */
 	private String parentKey;
+
+	/**
+	 * ID do arquivo no storage.
+	 */
 	private String fileDriveID;
+
+	/**
+	 * Indica em qual serviço de storage a informação do arquivo foi armazenada.
+	 */
 	private DriveContextEnum storageType;
 
 	public static long getSerialversionuid() {

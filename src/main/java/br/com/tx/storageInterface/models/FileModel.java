@@ -10,27 +10,68 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
 
+/**
+ * Classe que represeta um arquivo ou pasta.
+ */
 @Document(collection = "Files")
 public class FileModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * Id gerado altomaticamente
+	 */
 	@Id
 	@JsonProperty(access = Access.WRITE_ONLY)
 	private String _id;
 
+	/**
+	 * ID que representa o arquivo ou pasta
+	 * Pode ser repetido em casos de cópia.
+	 */
 	@JsonProperty(access = Access.WRITE_ONLY)
 	private String keyID;
 
+	/**
+	 * Classe de controle do registro.
+	 */
 	@JsonProperty(access = Access.WRITE_ONLY)
 	private FileInfoModel fileInfoModel;
 
-	/* Sequência de keyIDs do pai até o filhor {avô}/{pai}/{keyID} */
+	/**
+	 * Sequência de keyIDs do pai até o filhor {avô}/{pai}/{keyID}
+	 * O último id sempre será o KeyID do registro.
+	 */
 	private String key;
+	
+	/**
+	 * Nome do arquivo ou pasta.
+	 */
 	private String name;
+
+	/**
+	 * Data de criação
+	 */
 	private Date dateCreated;
+
+	/**
+	 * Indica se é um diretório.
+	 */
 	private boolean isDirectory;
+
+	/**
+	 * Tamanho do arquivo, caso não seja um diretório.
+	 */
 	private long size;
+
+	/**
+	 * Indica se o diretório possui subdiretório.
+	 */
 	private boolean hasSubDirectories;
+	
+	/**
+	 * Indica se é um arquivo de texto único.
+	 * É usado quando o script não é estruturado em pastas.
+	 */
 	private boolean isScriptUnique;
 
 	public FileModel() {
