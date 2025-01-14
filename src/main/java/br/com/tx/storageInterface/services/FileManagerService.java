@@ -112,6 +112,18 @@ public class FileManagerService {
 		return true;
 	}
 	
+	/**
+	 * Função responsável por buscar o conteúdo publicado de um diretório.
+	 * 
+	 * @param argumentsModel   Argumentos.
+	 * @param processID        ID do processo atual.
+	 * @param processVersionID ID da versão do processo atual.
+	 * @param packageID        ID do pacote ou atividade atual.
+	 * @param packageVersionID ID da versão do pacote ou atividade atual.
+	 * @param scriptModule     Enumerador que indica se estamos tratando um script
+	 *                         Único ou uma estrutura de arquivos e pastas.
+	 * @return FileModel[]	   Retorna um array com as informações das pasatas e arquivos do diretório.
+	 */
 	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = "";
@@ -131,6 +143,17 @@ public class FileManagerService {
 		return result;
 	}
 	
+	/**
+	 * Função responsável por buscar o conteúdo temporário de um diretório.
+	 * 
+	 * @param argumentsModel
+	 * @param processID
+	 * @param processVersionID
+	 * @param packageID
+	 * @param tempDirID
+	 * @param scriptModule
+	 * @return
+	 */
 	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule) {
 
 			if (!Utils.stringHasValue(tempDirID)) {
