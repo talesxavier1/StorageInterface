@@ -7,8 +7,17 @@ import java.security.NoSuchAlgorithmException;
 
 import org.springframework.web.multipart.MultipartFile;
 
+/** Classe com funçoes para calcular o hash dos arquivos. */
 public class FileHashUtil {
 
+	/**
+	 * Função para calcular o Hash MD5 de um arquivo com base em um MultipartFile.
+	 * 
+	 * @param file Arquivo.
+	 * @return Retorna o HashMD5 do arquivo.
+	 * @throws IOException              Quando não é possível ler o arquivo.
+	 * @throws NoSuchAlgorithmException Quando ão é possível obter o algorítimo do MD5
+	 */
 	public static String generateMD5Hash(MultipartFile file) throws IOException, NoSuchAlgorithmException {
 		MessageDigest digest = MessageDigest.getInstance("MD5");
 		try (InputStream inputStream = file.getInputStream()) {
@@ -25,7 +34,14 @@ public class FileHashUtil {
 		return sb.toString();
 	}
 
-	public static String generateMD5Hash(String value) throws IOException, NoSuchAlgorithmException {
+	/**
+	 * Função para calcular o hash md5 de uma string.
+	 * 
+	 * @param value valor.
+	 * @return Retorna o hash md5 da string
+	 * @throws NoSuchAlgorithmException Quando ão é possível obter o algorítimo do MD5
+	 */
+	public static String generateMD5Hash(String value) throws NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("MD5");
 		byte[] messageDigest = md.digest(value.getBytes());
 		StringBuilder hexString = new StringBuilder();

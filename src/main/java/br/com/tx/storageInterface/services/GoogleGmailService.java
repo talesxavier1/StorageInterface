@@ -20,14 +20,26 @@ import br.com.tx.storageInterface.drivers.GoogleGmailDrive;
 import br.com.tx.storageInterface.enums.DriveContextEnum;
 import br.com.tx.storageInterface.models.DriveFileInfoModel;
 
+/** Classe com as fuções para manipular os registros do Gmail. */
 public class GoogleGmailService {
 
+	/** Drive do Gmail. */
 	private Gmail googleGmailDrive;
+	/** Conta Google principal. */
 	private String defaultAccout;
 
+	/** Instância do Redis para chache. */
 	private RedisTemplate<String, String> redisTemplate;
+
+	/** Instância do servisos do mongoDB */
 	private MongoDBService dbService;
 
+	/**
+	 * 
+	 * @param redisTemplate Instânia do Redis para cache.
+	 * @throws GeneralSecurityException Quado não é pissível obter o Drive do Gmail.
+	 * @throws IOException Quando algum arquivo necessário para criar o drive do Gmail não pode ser lido.
+	 */
 	public GoogleGmailService(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
@@ -36,6 +48,13 @@ public class GoogleGmailService {
 		this.redisTemplate = redisTemplate;
 	}
 	
+	/**
+	 * Cria um Draft no Gmail. E armazena as informações do arquivo na collection DriveFileInfo.
+	 * 
+	 * @param value    Conteúdo do Draft.
+	 * @param fileName Nome do arquivo ou descrição do conteúdo.
+	 * @return Retorna o ID do Draft criado no Gmail. Retorna null quando não é possível criar o Draft.
+	 */
 	public String addMessage(String value, String fileName) {
 		try {
 			String messageHash = FileHashUtil.generateMD5Hash(value);
@@ -69,6 +88,12 @@ public class GoogleGmailService {
 		}
 	}
 
+	/**
+	 * Consulta um Draft no Gmail com base no ID da mensagem
+	 * 
+	 * @param fileID ID do Draft no Gmail.
+	 * @return Retorna o conteúdo do Draft
+	 */
 	public String getMessage(String fileID) {
 
 
@@ -100,6 +125,13 @@ public class GoogleGmailService {
 		return decodedMessage;
 	}
 
+	/**
+	 * Busca o conteúdo do Draft e cria um arquivo com base no retorno.
+	 * 
+	 * @param fileID   ID do Draft no Gmail.
+	 * @param fileName Nome do arquivo que vai ser criado. Quando não é passado, o arquivo é criado com o mesmo nome que foi enviado no momento do upload.
+	 * @return Retorna o Path do arquivo criado. Retorna null quando não é possível criar o arquivo.
+	 */
 	public String getMessageFile(String fileID, String fileName) {
 
 		String tempFIlePath = null;
@@ -136,21 +168,28 @@ public class GoogleGmailService {
 		return tempFIlePath;
 	}
 
+	/**
+	 * @return Retorna o email da conta Google.
+	 */
 	public String getDefaultAccout() {
 		return defaultAccout;
 	}
 
-
-	private DriveFileInfoModel getDriveFileInfoByID(String fileID) {
-		DriveFileInfoModel result = dbService.getDriveFileInfoRepository().findBy_id(fileID);
-		return result;
-	}
-
+	/**
+	 * Busca as informações do arquivo com base no hash md5 dele.
+	 * 
+	 * @param hash hashmd5 do arquivo ou texto.
+	 * @return Retorna as informaçoes do arquivo.
+	 */
 	private DriveFileInfoModel getDriveFileInfoByHash(String hash) {
 		DriveFileInfoModel result = dbService.getDriveFileInfoRepository().findByFileHash(hash);
 		return result;
 	}
 
+	/**
+	 * @param message Mensagem.
+	 * @return Retorna o conteúdo do body de uma Message. Retorna null quando não é possível obter o Body.
+	 */
 	private String getMessageBodyFromMesage(Message message) {
 		try {
 			MessagePart messagePart = message.getPayload();
@@ -176,11 +215,25 @@ public class GoogleGmailService {
 
 	}
 
+	/**
+	 * Busca um draft no gmail com base no ID da mensagem.
+	 * 
+	 * @param fileID ID do draft no gmail.
+	 * @return Retorna o Draft.
+	 * @throws IOException Quando não é possível executar a consulta utilizando o drive do Gmail.
+	 */
 	private Draft getDraft(String fileID) throws IOException {
 		Draft draftResult = this.googleGmailDrive.users().drafts().get(this.defaultAccout, fileID).execute();
 		return draftResult;
 	}
 
+	/**
+	 * Busca um a Message de um draft no gmail.
+	 * 
+	 * @param fileID fileID ID do draft no gmail.
+	 * @return Retorna a Message de um Draft.
+	 * @throws IOException Quando não é possível executar a consulta utilizando o drive do Gmail.
+	 */
 	private Message getDraftMessage(String fileID) throws IOException {
 		Draft draftResult = this.getDraft(fileID);
 		Message message = draftResult.getMessage();
