@@ -5,11 +5,22 @@ import java.util.Date;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
+/**
+ * Classe responsavel por representar arquivos ou diretórios temporários.
+ * Classe tem os mesmo campos que o modelo FileModel com o acréscimo de campos de controle.
+ */
 @Document(collection = "TempFiles")
 public class TempFileModel extends FileModel implements Serializable {
 
 	private static final long serialVersionUID = 1L;
+	/**
+	 * ID do diretório temporário.
+	 * Todos os diretórios e arquivos temporários vão ter esse ID igual.
+	 */
 	private String tempDirID;
+	/**
+	 * Data de criação do diretório temporário.
+	 */
 	private Date tempDirDate;
 
 	public String getTempDirID() {
