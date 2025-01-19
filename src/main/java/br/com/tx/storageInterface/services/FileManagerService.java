@@ -625,7 +625,7 @@ public class FileManagerService {
 	
 			String mimeType = Utils.getFileMimeType(chunk);
 			if (!mimeType.contains("text")) {
-				throw new ParameterException("Não é possível atializar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
+				throw new ParameterException("Não é possível atualizar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
 			}
 
 			GoogleGmailService drive = new GoogleGmailService(null);

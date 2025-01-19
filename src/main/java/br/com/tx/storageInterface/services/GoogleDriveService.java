@@ -21,14 +21,27 @@ import br.com.tx.storageInterface.Utils.FilesUtils;
 import br.com.tx.storageInterface.drivers.GoogleDriveDrive;
 import br.com.tx.storageInterface.models.DriveFileInfoModel;
 
-
+/** Classe resposável por manipular arquivos no googleDrive. */
 public class GoogleDriveService {
 
+	/** Instância do servico do mongoDB */
 	private MongoDBService dbService;
+
+	/** Drive do google Drive. */
 	private Drive googleDriveDrive;
+
+	/** Conta de email principal do google drive. */
 	private String defaultAccout;
+
+	/** Instância do redis para cache. */
 	private RedisTemplate<String, String> redisTemplate;
 
+	/**
+	 * 
+	 * @param redisTemplate Instâcia do redis para cache.
+	 * @throws GeneralSecurityException Quando não é possível autenticar a conta google.
+	 * @throws IOException Quando não é possivel criar algum arquivo necessário para a autenticação com o google.
+	 */
 	public GoogleDriveService(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
@@ -38,7 +51,17 @@ public class GoogleDriveService {
 
 		this.redisTemplate = redisTemplate;
 	}
-
+	
+	/**
+	 * Função responsável por fazer o download de um arquivo armazenado no google
+	 * Drive.
+	 * 
+	 * @param driveFileID ID do arquivo no Google Drive.
+	 * @param fileName    Nome do arquivo que vai ser criado localmente. Caso não
+	 *                    seja passado, o arquivo será criado com o nome original
+	 *                    dele.
+	 * @return Retorna o Path do arquivo temporário criado.
+	 */
 	public String downloadFile(String driveFileID, String fileName) {
 
 		if (fileName == null) {
@@ -82,6 +105,17 @@ public class GoogleDriveService {
 		return tempFIlePath;
 	}
 
+	/**
+	 * Função responsável por retornar o conteúdo do arquivo armazenado no google
+	 * drive.
+	 * 
+	 * @deprecated Função não é mais utilizada, porque os arquivos de texto estão
+	 *             sendo enviados para o google gmail.
+	 * 
+	 * @param fileID ID do aqruivo no google drive.
+	 * @return Conteúdo do arquivo no google Drive.
+	 */
+	@Deprecated
 	public String getFileContent(String fileID) {
 		String cachedContent = (String) redisTemplate.opsForValue().get("FILE-STR-CONTENT-" + fileID);
 		if (cachedContent != null) {
@@ -101,6 +135,18 @@ public class GoogleDriveService {
 		return result;
 	}
 
+	/**
+	 * Função responsável por fazer o upload do arquivo no google drive.
+	 * 
+	 * @param chunk          Arquivo.
+	 * @param originFileName Nome do arquivo.
+	 * @return Retorna o ID do arquivo no google drive.
+	 * @throws IOException              Quando não é possível calcular o hash md5 do
+	 *                                  arquivo ou enviar o arquivo para o google
+	 *                                  Drive.
+	 * @throws NoSuchAlgorithmException Quando não é possível calcular o hash md5 do
+	 *                                  arquivo
+	 */
 	public String uploadFile(MultipartFile chunk, String originFileName) throws IOException, NoSuchAlgorithmException {
 		String fileMD5Hash = FileHashUtil.generateMD5Hash(chunk);
 		var driveFileInfoResultFind = findDriveFileInfo(null, fileMD5Hash);
@@ -119,8 +165,6 @@ public class GoogleDriveService {
 
 		var uploadResult = this.googleDriveDrive.files().create(fileMetadata, mediaContent).setFields("id").execute();
 
-//		Permission permission = new Permission().setType("user").setRole("writer").setEmailAddress("npcpk1999.drive01@gmail.com");
-//		this.googleDriveDrive.permissions().create(uploadResult.getId(), permission).setFields("id").execute();
 		FilesUtils.tryDeleteFile(tempFileDir);
 		
 		var newDriveFileInfo = new DriveFileInfoModel();
@@ -134,6 +178,16 @@ public class GoogleDriveService {
 
 	}
 
+	/**
+	 * Função que verifica se existe registro de upload do arquivo no google drive
+	 * pelo hashmd5.
+	 * 
+	 * @deprecated Não é necessário, pois a função findDriveFileInfo substituiu
+	 *             essa.
+	 * @param fileMD5Hash HashMD5 do arquivo.
+	 * @return Retorna true caso encontre algum registro de upload no banco.
+	 */
+	@Deprecated
 	public boolean fileExistInDrive(String fileMD5Hash) {
 		var fileModel = dbService.getDriveFileInfoRepository().countByFileHash(fileMD5Hash);
 
@@ -142,7 +196,16 @@ public class GoogleDriveService {
 		}
 		return false;
 	}
-
+	
+	/**
+	 * Função que procura as informaçõe de upload de um arquivo com base no ID ou
+	 * hash do arquivo.
+	 * 
+	 * 
+	 * @param id          ID do arquivo no banco.
+	 * @param fileMD5Hash hashmd5 do aqruivo.
+	 * @return Retorna a classe DriveFileInfoModel.
+	 */
 	public DriveFileInfoModel findDriveFileInfo(String id, String fileMD5Hash) {
 		if (id != null) {
 			return dbService.getDriveFileInfoRepository().findBy_id(id);
@@ -152,6 +215,9 @@ public class GoogleDriveService {
 		return null;
 	}
 
+	/**
+	 * @return Retorna a conta google pricipal do drive.
+	 */
 	public String getDefaultAccout() {
 		return defaultAccout;
 	}
