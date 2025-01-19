@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import br.com.tx.storageInterface.enums.DriveContextEnum;
+
 @Document(collection = "DriveConfigs")
 public class DriveConfigsModel implements Serializable {
 
@@ -15,7 +17,7 @@ public class DriveConfigsModel implements Serializable {
 	private String _id;
 
 	private String emailContaPrincipal;
-	private String scope;
+	private DriveContextEnum driveContext;
 	private String refreshToken;
 	private long expiresIn;
 	private long tokenGeneratedTimestamp;
@@ -39,14 +41,6 @@ public class DriveConfigsModel implements Serializable {
 		this.clientSecret = clientSecret;
 	}
 
-	public String getScope() {
-		return scope;
-	}
-
-	public void setScope(String scope) {
-		this.scope = scope;
-	}
-
 	public String getRefreshToken() {
 		return refreshToken;
 	}
@@ -54,8 +48,6 @@ public class DriveConfigsModel implements Serializable {
 	public void setRefreshToken(String refreshToken) {
 		this.refreshToken = refreshToken;
 	}
-
-
 
 
 	public String getAccessToken() {
@@ -100,5 +92,13 @@ public class DriveConfigsModel implements Serializable {
 
 	public void setExpiresIn(long expiresIn) {
 		this.expiresIn = expiresIn;
+	}
+
+	public DriveContextEnum getDriveContext() {
+		return driveContext;
+	}
+
+	public void setDriveContext(DriveContextEnum driveContext) {
+		this.driveContext = driveContext;
 	}
 }

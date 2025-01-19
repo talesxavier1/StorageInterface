@@ -8,20 +8,26 @@ import com.google.api.client.json.gson.GsonFactory;
 
 import br.com.tx.storageInterface.SpringContext;
 import br.com.tx.storageInterface.Utils.Utils;
+import br.com.tx.storageInterface.enums.DriveContextEnum;
 import br.com.tx.storageInterface.models.CredentialInfosModel;
 import br.com.tx.storageInterface.models.DriveConfigsModel;
 
+/** Classe resposável por gereciar as credenciais google. */
 public class GoogleCredentialService {
 
+	/** Instancia do serviço do mongodb */
 	private MongoDBService dbService;
+
+	/** Conta de email da credencial. */
 	private String emailContaPrincipal;
-	private String scope;
+
+	private DriveContextEnum driveContext;
 	
-	public GoogleCredentialService(String emailContaPrincipal, String scope) {
+	public GoogleCredentialService(String emailContaPrincipal, DriveContextEnum driveContext) {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
 		this.emailContaPrincipal = emailContaPrincipal;
-		this.scope = scope;
+		this.driveContext = driveContext;
 	}
 
 	public CredentialInfosModel getCredentials() {
@@ -84,10 +90,10 @@ public class GoogleCredentialService {
 	}
 	
 	private DriveConfigsModel getConfig() {
-		var config = this.dbService.getDriveConfigsRepository().getConfig(this.emailContaPrincipal, this.scope);
+		var config = this.dbService.getDriveConfigsRepository().getConfig(this.emailContaPrincipal, this.driveContext);
 
 		if (config == null) {
-			throw new NullPointerException(String.format("Não foi possível encontrar registro de configuraçoes para emailContaPrincipal: %s e scope: %s", emailContaPrincipal, scope));
+			throw new NullPointerException(String.format("Não foi possível encontrar registro de configuraçoes para emailContaPrincipal: %s e scope: %s", emailContaPrincipal, driveContext));
 		}
 		return config;
 	}

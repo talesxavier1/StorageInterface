@@ -15,6 +15,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 
+import br.com.tx.storageInterface.enums.DriveContextEnum;
 import br.com.tx.storageInterface.models.CredentialInfosModel;
 import br.com.tx.storageInterface.services.GoogleCredentialService;
 
@@ -22,7 +23,7 @@ public class GoogleGmailDrive {
 
 
 	public static Gmail getDrive(String mainAccount) throws IOException, GeneralSecurityException {
-		GoogleCredentialService credentialService = new GoogleCredentialService(mainAccount, "GMAIL");
+		GoogleCredentialService credentialService = new GoogleCredentialService(mainAccount, DriveContextEnum.GOOGLE_GMAIL);
 		CredentialInfosModel credentialInfosModel = credentialService.getCredentials();
 		Gmail newDrive = new Gmail.Builder(credentialInfosModel.getHttpTransport(), GsonFactory.getDefaultInstance(), credentialInfosModel.getCredential()).setApplicationName("GoogleDrive" + "-" + mainAccount).build();
 		return newDrive;
