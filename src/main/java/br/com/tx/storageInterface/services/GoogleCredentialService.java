@@ -9,7 +9,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import br.com.tx.storageInterface.SpringContext;
 import br.com.tx.storageInterface.Utils.Utils;
 import br.com.tx.storageInterface.enums.DriveContextEnum;
-import br.com.tx.storageInterface.models.CredentialInfosModel;
+import br.com.tx.storageInterface.models.GoogleCredentialInfosModel;
 import br.com.tx.storageInterface.models.DriveConfigsModel;
 
 /** Classe resposável por gereciar as credenciais google. */
@@ -21,8 +21,14 @@ public class GoogleCredentialService {
 	/** Conta de email da credencial. */
 	private String emailContaPrincipal;
 
+	/** Enum que define qual é o tipo de armazenamento que será utilizado. */
 	private DriveContextEnum driveContext;
 	
+	/**
+	 * 
+	 * @param emailContaPrincipal Endereço de email da conta do serviço.
+	 * @param driveContext        Tipo de de serviço de armazenamento.
+	 */
 	public GoogleCredentialService(String emailContaPrincipal, DriveContextEnum driveContext) {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
@@ -30,10 +36,15 @@ public class GoogleCredentialService {
 		this.driveContext = driveContext;
 	}
 
-	public CredentialInfosModel getCredentials() {
+	/**
+	 * Função que monta a credencial necessário para a autenticação com o google.
+	 * 
+	 * @return retorna a classe CredentialInfosModel que é necessária para a autenticação do serviço google.
+	 */
+	public GoogleCredentialInfosModel getCredentials() {
 
 		DriveConfigsModel config = this.getConfig();
-		var result = new CredentialInfosModel();
+		var result = new GoogleCredentialInfosModel();
 		try {
 			NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 			result.setHttpTransport(httpTransport);
@@ -76,6 +87,12 @@ public class GoogleCredentialService {
 		return result;
 	}
 	
+	/**
+	 * Função verifica se o token armazenado ainda é válido.
+	 * 
+	 * @param config classe com as informações da autenticação OAuth do google.
+	 * @return Retorna true quando está válido.
+	 */
 	private boolean checkTokenValidity(DriveConfigsModel config) {
 
 		long currentTime = Utils.getDateNow().getTime();
@@ -88,7 +105,13 @@ public class GoogleCredentialService {
 
 		return true;
 	}
-	
+		
+	/**
+	 * Função responsável por buscar o registro de configuração do serviço do
+	 * google.
+	 * 
+	 * @return Retorna a classe de configuração.
+	 */
 	private DriveConfigsModel getConfig() {
 		var config = this.dbService.getDriveConfigsRepository().getConfig(this.emailContaPrincipal, this.driveContext);
 

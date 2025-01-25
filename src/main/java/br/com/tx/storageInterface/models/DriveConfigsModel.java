@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import br.com.tx.storageInterface.enums.DriveContextEnum;
 
 @Document(collection = "DriveConfigs")
+/** Classe que representa as configuraçoes dos serviços de armazenamento. */
 public class DriveConfigsModel implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -16,13 +17,28 @@ public class DriveConfigsModel implements Serializable {
 	@Id
 	private String _id;
 
+	/** Conta de email do serviço de armazenamento. */
 	private String emailContaPrincipal;
+
+	/** Serviço de armazenamento. */
 	private DriveContextEnum driveContext;
+
+	/** Refresh token do serviço. */
 	private String refreshToken;
+
+	/** Timestemp final do token. */
 	private long expiresIn;
+
+	/** Timestemp da criação do token. */
 	private long tokenGeneratedTimestamp;
+
+	/** Access Token do serviço. */
 	private String accessToken;
+
+	/** Client id do serviço. */
 	private String clientID;
+
+	/** Client Secret do serviço. */
 	private String clientSecret;
 
 	public String getClientID() {
