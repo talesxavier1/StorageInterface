@@ -5,26 +5,21 @@ import java.util.UUID;
 
 import br.com.tx.storageInterface.Utils.Utils;
 
+/* Classe usada para organizar os TempFileModel em hierarquia */
 public class FilelHierarchyModel {
+
+	/* Arquivo ou pasta pai */
 	private TempFileModel sourceFileModel;
+	/* Lista de arquivos ou pastas filhas */
 	private List<FilelHierarchyModel> childsFileModel;
 
-	public TempFileModel getSourceFileModel() {
-		return sourceFileModel;
-	}
-
-	public void setSourceFileModel(TempFileModel sourceFileModel) {
-		this.sourceFileModel = sourceFileModel;
-	}
-
-	public List<FilelHierarchyModel> getChildsFileModel() {
-		return childsFileModel;
-	}
-
-	public void setChildsFileModel(List<FilelHierarchyModel> childsFileModel) {
-		this.childsFileModel = childsFileModel;
-	}
-
+	/**
+	 * Atualiza o setKeyID do sourceFileModel e todos seus filhos.
+	 * 
+	 * @param newID     Novo ID do sourceFileModel
+	 * @param parentKey Novo parentKey do sourceFileModel. (Pode ser passado nulo quando não tem pai.)
+	 * @throws Exception lançado quando parâmetro newID não é passado.
+	 */
 	public void updateIDAndHierarchy(String newID, String parentKey) throws Exception {
 
 		if(!Utils.stringHasValue(newID)) {throw new Exception("Campo ID vazio ou nulo.");}
@@ -46,6 +41,11 @@ public class FilelHierarchyModel {
 		}
 	}
 
+	/**
+	 * Atualiza a Key do sourceFileModel e de todos os filhos.
+	 * 
+	 * @param key Nova Key.
+	 */
 	public void updateKeyAndHierarchy(String key) {
 		
 		if (!Utils.stringHasValue(key)) {
@@ -59,6 +59,11 @@ public class FilelHierarchyModel {
 		}
 	}
 
+	/**
+	 * Atualiza o parentKey do sourceFileModel e de todos seus filhos.
+	 * 
+	 * @param parentKey nova parentKey
+	 */
 	public void updateParentKeyAndHierarchy(String parentKey) {
 		if (!Utils.stringHasValue(parentKey)) {
 			this.sourceFileModel.getFileInfoModel().setParentKey("");
@@ -71,6 +76,22 @@ public class FilelHierarchyModel {
 		for (FilelHierarchyModel child : this.childsFileModel) {
 			child.updateParentKeyAndHierarchy(this.sourceFileModel.getKey());
 		}
+	}
+
+	public TempFileModel getSourceFileModel() {
+		return sourceFileModel;
+	}
+
+	public void setSourceFileModel(TempFileModel sourceFileModel) {
+		this.sourceFileModel = sourceFileModel;
+	}
+
+	public List<FilelHierarchyModel> getChildsFileModel() {
+		return childsFileModel;
+	}
+
+	public void setChildsFileModel(List<FilelHierarchyModel> childsFileModel) {
+		this.childsFileModel = childsFileModel;
 	}
 
 }

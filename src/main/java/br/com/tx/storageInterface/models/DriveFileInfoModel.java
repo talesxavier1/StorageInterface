@@ -8,13 +8,23 @@ import br.com.tx.storageInterface.enums.DriveContextEnum;
 
 
 @Document(collection = "DriveFileInfo")
+/** Classe que representa um registro salvo em algum serviço de armazenamento. */
 public class DriveFileInfoModel {
 
 	@Id
+	/** Id do registro. (Id retornado no momento do envio para o serviço de armazenamento.) */
 	private String _id;
+
+	/** Hash do conteúdo ou do arquivo. */
 	private String fileHash;
+
+	/** Conta de serviço onde o arquivo foi armazenado. */
 	private String defaultAccount;
+
+	/** Nome do arquivo no momento do envio. */
 	private String fileName;
+
+	/** Serviço de armazenamento usado. */
 	private DriveContextEnum driveContext;
 
 	public String getDefaultAccount() {

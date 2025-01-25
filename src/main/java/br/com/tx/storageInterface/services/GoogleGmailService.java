@@ -1,9 +1,16 @@
 package br.com.tx.storageInterface.services;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
+import java.util.Properties;
+
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage.RecipientType;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -63,7 +70,7 @@ public class GoogleGmailService {
 				return createdMessage.get_id();
 			}
 
-			Message message = GoogleGmailDrive.createMessage(this.defaultAccout, fileName, value);
+			Message message = createMessage(this.defaultAccout, fileName, value); // |||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 			Draft draft = new Draft();
 			draft.setMessage(message);
 			Draft draftResult = this.googleGmailDrive.users().drafts().create(this.defaultAccout, draft).execute();
@@ -237,6 +244,63 @@ public class GoogleGmailService {
 	private Message getDraftMessage(String fileID) throws IOException {
 		Draft draftResult = this.getDraft(fileID);
 		Message message = draftResult.getMessage();
+		return message;
+	}
+
+	/**
+	 * Cria a classe Message que o google aceita para a criação de um email.
+	 * 
+	 * @param recipientEmail Destinatário.
+	 * @param subject        Assunto.
+	 * @param bodyText       Conteúdo da mensagem.
+	 * @return retorna a class Message.
+	 * @throws Exception lançado quando ocorre algum erro ao tentar gravar o conteúdo da mensagem na class.
+	 */
+	private Message createMessage(String recipientEmail, String subject, String bodyText) throws Exception {
+		MimeMessage mimeMessage = createMimeMessage(recipientEmail, "me", subject, bodyText);
+		Message message = createMessageWithMimeMessage(mimeMessage);
+		return message;
+	}
+
+	/**
+	 * Cria a classe MimeMessage. Base para criar a classe Message.
+	 * 
+	 * @param to       Destino da mensagem.
+	 * @param from     Origem da mensagem.
+	 * @param subject  assunto.
+	 * @param bodyText conteúdo.
+	 * @return retora a classe MimeMessage
+	 * @throws Exception lançado quando ocorre algum erro ao tentar gravar o conteúdo da mensagem na class.
+	 */
+	private MimeMessage createMimeMessage(String to, String from, String subject, String bodyText) throws Exception {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		MimeMessage email = new MimeMessage(session);
+		email.setFrom(new InternetAddress(from));
+		email.addRecipient(RecipientType.TO, new InternetAddress(to));
+		email.setSubject(subject);
+		email.setText(bodyText);
+
+		return email;
+	}
+
+	/**
+	 * Cria uma Message com base em uma MimeMessage.
+	 * 
+	 * @param emailContent MimeMessage
+	 * @return retora a classe Message montada.
+	 * @throws Exception lançado quando ocorre algum erro ao tentar gravar o conteúdo da mensagem na class.
+	 */
+	private Message createMessageWithMimeMessage(MimeMessage emailContent) throws Exception {
+		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+		emailContent.writeTo(buffer);
+		byte[] bytes = buffer.toByteArray();
+		String encodedEmail = Base64.getUrlEncoder().encodeToString(bytes);
+
+		Message message = new Message();
+		message.setRaw(encodedEmail);
+
 		return message;
 	}
 
