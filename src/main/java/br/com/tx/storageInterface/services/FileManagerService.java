@@ -178,7 +178,7 @@ public class FileManagerService {
 	}
 
 	public boolean tempDirExist(String tempDirID) {
-		return dbService.getTempFileRepository().tempDirExist(tempDirID);
+		return dbService.getTempFileRepository().tempDirExistV2(tempDirID);
 	}
 
 	@Transactional(rollbackFor = Exception.class)
@@ -225,6 +225,9 @@ public class FileManagerService {
 				throw new NoSuchAttributeException("Não foi possível obter o fileModel de keyID: " + keyID);
 			}
 			
+			if (fileModel.getFileInfoModel().getStorageType() != DriveContextEnum.GOOGLE_GMAIL) {
+				throw new IOException("Arquivo foi armazenado no drive. não é possível obter o conteúdo.");
+			}
 			
 			String fileDriveID = fileModel.getFileInfoModel().getFileDriveID();
 			if (!Utils.stringHasValue(fileDriveID)) {
