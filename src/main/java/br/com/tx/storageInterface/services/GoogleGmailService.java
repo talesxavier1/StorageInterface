@@ -12,8 +12,6 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMessage.RecipientType;
 
-import org.springframework.data.redis.core.RedisTemplate;
-
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Draft;
 import com.google.api.services.gmail.model.Message;
@@ -35,24 +33,19 @@ public class GoogleGmailService {
 	/** Conta Google principal. */
 	private String defaultAccout;
 
-	/** Instância do Redis para chache. */
-	private RedisTemplate<String, String> redisTemplate;
-
 	/** Instância do servisos do mongoDB */
 	private MongoDBService dbService;
 
 	/**
 	 * 
-	 * @param redisTemplate Instânia do Redis para cache.
 	 * @throws GeneralSecurityException Quado não é pissível obter o Drive do Gmail.
 	 * @throws IOException Quando algum arquivo necessário para criar o drive do Gmail não pode ser lido.
 	 */
-	public GoogleGmailService(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
+	public GoogleGmailService() throws GeneralSecurityException, IOException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
 		this.defaultAccout = "npcpk1999.drive01@gmail.com";
 		this.googleGmailDrive = GoogleGmailDrive.getDrive(this.defaultAccout);
-		this.redisTemplate = redisTemplate;
 	}
 	
 	/**
@@ -103,8 +96,7 @@ public class GoogleGmailService {
 	 */
 	public String getMessage(String fileID) {
 
-
-		String cachedContent = (String) redisTemplate.opsForValue().get("FILE-STR-CONTENT-" + fileID);
+		String cachedContent = RedisOperationsService.getCache("FILE-STR-CONTENT-" + fileID);
 		if (cachedContent != null) {
 			return cachedContent;
 		}
@@ -128,7 +120,7 @@ public class GoogleGmailService {
 			}
 		}
 		String decodedMessage = new String(decoded, StandardCharsets.UTF_8);
-
+		RedisOperationsService.addCache("FILE-STR-CONTENT-" + fileID, decodedMessage);
 		return decodedMessage;
 	}
 
@@ -152,7 +144,7 @@ public class GoogleGmailService {
 				fileName = driveFileInfo.getFileName();
 			}
 
-			String cachedContent = (String) redisTemplate.opsForValue().get("STORAGE_INTERFACE-FILE-B64-" + fileID);
+			String cachedContent = RedisOperationsService.getCache("STORAGE_INTERFACE-FILE-B64-" + fileID);
 			if (cachedContent != null) {
 				byte[] bContent = Base64.getDecoder().decode(cachedContent);
 				tempFIlePath = FilesUtils.createTempFile(fileName, bContent, 60);
@@ -164,7 +156,7 @@ public class GoogleGmailService {
 				byte[] decoded = Base64.getDecoder().decode(bData);
 
 				tempFIlePath = FilesUtils.createTempFile(fileName, decoded, 60);
-				redisTemplate.opsForValue().set("STORAGE_INTERFACE-FILE-B64-" + fileID, bData);
+				RedisOperationsService.addCache("STORAGE_INTERFACE-FILE-B64-" + fileID, bData);
 
 			}
 		} catch (IOException e) {
