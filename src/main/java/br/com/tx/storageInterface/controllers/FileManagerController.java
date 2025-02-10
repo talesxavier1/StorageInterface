@@ -36,6 +36,7 @@ import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.FileModel;
 import br.com.tx.storageInterface.models.ResponseContentModel;
 import br.com.tx.storageInterface.services.FileManagerService;
+import br.com.tx.storageInterface.services.RedisSevice;
 
 
 
@@ -46,6 +47,9 @@ public class FileManagerController {
 
 	@Autowired
 	private FileManagerService fileManagerService;
+
+	@Autowired
+	private RedisSevice redisSevice;
 
 	@GetMapping("/")
 	public ResponseEntity<ResponseContentModel> fileManagerGet(

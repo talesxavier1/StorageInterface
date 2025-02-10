@@ -8,7 +8,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.UUID;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.google.api.client.http.FileContent;
@@ -33,23 +32,18 @@ public class GoogleDriveService {
 	/** Conta de email principal do google drive. */
 	private String defaultAccout;
 
-	/** Instância do redis para cache. */
-	private RedisTemplate<String, String> redisTemplate;
 
 	/**
 	 * 
-	 * @param redisTemplate Instâcia do redis para cache.
 	 * @throws GeneralSecurityException Quando não é possível autenticar a conta google.
 	 * @throws IOException Quando não é possivel criar algum arquivo necessário para a autenticação com o google.
 	 */
-	public GoogleDriveService(RedisTemplate<String, String> redisTemplate) throws GeneralSecurityException, IOException {
+	public GoogleDriveService() throws GeneralSecurityException, IOException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
 		this.defaultAccout = "npcpk1999.drive01@gmail.com";
 
 		this.googleDriveDrive = GoogleDriveDrive.getDrive(this.defaultAccout);
-
-		this.redisTemplate = redisTemplate;
 	}
 	
 	/**
@@ -83,7 +77,7 @@ public class GoogleDriveService {
 
 		String tempFIlePath = null;
 		try {
-			String cachedContent = (String) redisTemplate.opsForValue().get("FILE-B64-" + driveFileID);
+			String cachedContent = RedisOperationsService.getCache("FILE-B64-" + driveFileID);
 			if (cachedContent != null) {
 				byte[] bContent = Base64.getDecoder().decode(cachedContent);
 				tempFIlePath = FilesUtils.createTempFile(fileName, bContent, 60);
@@ -95,7 +89,7 @@ public class GoogleDriveService {
 				tempFIlePath = FilesUtils.createTempFile(fileName, fileContent, 60);
 
 				String encodedContent = Base64.getEncoder().encodeToString(fileContent);
-				redisTemplate.opsForValue().set("FILE-B64-" + driveFileID, encodedContent);
+				RedisOperationsService.addCache("FILE-B64-" + driveFileID, encodedContent);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -117,7 +111,7 @@ public class GoogleDriveService {
 	 */
 	@Deprecated
 	public String getFileContent(String fileID) {
-		String cachedContent = (String) redisTemplate.opsForValue().get("FILE-STR-CONTENT-" + fileID);
+		String cachedContent = RedisOperationsService.getCache("FILE-STR-CONTENT-" + fileID);
 		if (cachedContent != null) {
 			return cachedContent;
 		}
@@ -130,7 +124,7 @@ public class GoogleDriveService {
 			return "";
 		}
 		String result = outputStream.toString(StandardCharsets.UTF_8);
-		redisTemplate.opsForValue().set("FILE-STR-CONTENT-" + fileID, result);
+		RedisOperationsService.addCache("FILE-STR-CONTENT-" + fileID, result);
 
 		return result;
 	}

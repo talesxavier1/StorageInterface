@@ -12,7 +12,6 @@ import javax.naming.directory.NoSuchAttributeException;
 
 import org.apache.avalon.framework.parameters.ParameterException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -234,7 +233,7 @@ public class FileManagerService {
 				throw new NoSuchAttributeException("Não foi possível obter o fileDriveID do fileModel _id: " + fileModel.get_id());
 			}
 			
-			GoogleGmailService drive = new GoogleGmailService(redisTemplate);
+			GoogleGmailService drive = new GoogleGmailService();
 			String result = drive.getMessage(fileModel.getFileInfoModel().getFileDriveID());
 			return result;
 	}
@@ -417,7 +416,7 @@ public class FileManagerService {
 			String storageDefaultAccout = null;
 			DriveContextEnum storageType = null;
 			if (mimeType.contains("text")) {
-				GoogleGmailService drive = new GoogleGmailService(null);
+				GoogleGmailService drive = new GoogleGmailService();
 				var bChuk = chunk.getBytes();
 				var strChunk = new String(bChuk, "UTF-8");
 
@@ -425,7 +424,7 @@ public class FileManagerService {
 				storageDefaultAccout = drive.getDefaultAccout();
 				storageType = DriveContextEnum.GOOGLE_GMAIL;
 			} else {
-				GoogleDriveService drive = new GoogleDriveService(null);
+				GoogleDriveService drive = new GoogleDriveService();
 				fileDriveID = drive.uploadFile(chunk, argumentsModel.getClassChunkMetadata().getFileName());
 				storageDefaultAccout = drive.getDefaultAccout();
 				storageType = DriveContextEnum.GOOGLE_DRIVE;
@@ -506,10 +505,10 @@ public class FileManagerService {
 
 		String tempFilePath = null;
 		if (storageType == DriveContextEnum.GOOGLE_DRIVE) {
-			GoogleDriveService drive = new GoogleDriveService(redisTemplate);
+			GoogleDriveService drive = new GoogleDriveService();
 			tempFilePath = drive.downloadFile(driveFileID, fileName);
 		} else if (storageType == DriveContextEnum.GOOGLE_GMAIL) {
-			GoogleGmailService gmailService = new GoogleGmailService(redisTemplate);
+			GoogleGmailService gmailService = new GoogleGmailService();
 			tempFilePath = gmailService.getMessageFile(driveFileID, fileName);
 		}
 		
@@ -536,7 +535,7 @@ public class FileManagerService {
 				throw new ParameterException("Não é possível atializar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
 			}
 
-			GoogleGmailService drive = new GoogleGmailService(null);
+			GoogleGmailService drive = new GoogleGmailService();
 			var bChuk = chunk.getBytes();
 			var strChunk = new String(bChuk, "UTF-8");
 
@@ -631,7 +630,7 @@ public class FileManagerService {
 				throw new ParameterException("Não é possível atualizar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
 			}
 
-			GoogleGmailService drive = new GoogleGmailService(null);
+			GoogleGmailService drive = new GoogleGmailService();
 			var bChuk = chunk.getBytes();
 			var strChunk = new String(bChuk, "UTF-8");
 
@@ -670,8 +669,6 @@ public class FileManagerService {
 	// ------------------------------------------------ PRIVATE ------------------------------------------------ //	
 	@Autowired
 	private MongoDBService dbService;
-	@Autowired
-	private RedisTemplate<String, String> redisTemplate;
 
 	private FilelHierarchyModel buildFilelHierarchy(String processID, String processVersionID, String packageID, String key, String keyID, String tempDirID) {
 		if (!Utils.stringHasValue(key) && !Utils.stringHasValue(keyID)) {
