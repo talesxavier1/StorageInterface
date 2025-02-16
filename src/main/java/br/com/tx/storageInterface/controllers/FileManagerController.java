@@ -36,8 +36,6 @@ import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.FileModel;
 import br.com.tx.storageInterface.models.ResponseContentModel;
 import br.com.tx.storageInterface.services.FileManagerService;
-import br.com.tx.storageInterface.services.RedisSevice;
-
 
 
 @RestController
@@ -48,8 +46,6 @@ public class FileManagerController {
 	@Autowired
 	private FileManagerService fileManagerService;
 
-	@Autowired
-	private RedisSevice redisSevice;
 
 	@GetMapping("/")
 	public ResponseEntity<ResponseContentModel> fileManagerGet(
@@ -57,7 +53,7 @@ public class FileManagerController {
 			@RequestHeader String processID,
 			@RequestHeader String processVersionID,
 			@RequestHeader String packageID,
-			@RequestHeader String packageVersionID,
+			@RequestHeader(required = false) String packageVersionID, /* Quando não enviado, a aplicaçã retorna todos os arquivos independete da versão. */
 			@RequestParam String arguments,
 			@RequestHeader(required = false) String tempDirID,
 			@RequestHeader(required = false) ScriptModuleTypeEnum scriptModule

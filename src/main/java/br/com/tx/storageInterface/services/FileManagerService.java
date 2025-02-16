@@ -137,7 +137,14 @@ public class FileManagerService {
 			isUniqueScript = false;
 		}
 
-		FileModel[] result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
+		FileModel[] result;
+		if (packageVersionID != null) {
+			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
+		} 
+		/* Quando o JsonSchema está utilizando a StorageInterface a versão do pacote é desconsiderada*/
+		else {
+			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, isUniqueScript);
+		}
 
 		return result;
 	}
@@ -216,7 +223,11 @@ public class FileManagerService {
 				throw new NoSuchAttributeException("Não foi possível obter o keyID do pathInfoModels.");
 			}
 
-			FileModel fileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+			FileModel fileModel = null;
+
+			if (Utils.stringHasValue(tempDirID)) {
+				fileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+			}
 			if (fileModel == null) {
 				fileModel = dbService.getFilesRepository().findByKeyID(keyID);
 			}
