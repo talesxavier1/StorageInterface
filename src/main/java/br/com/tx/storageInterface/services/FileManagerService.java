@@ -12,6 +12,7 @@ import javax.naming.directory.NoSuchAttributeException;
 
 import org.apache.avalon.framework.parameters.ParameterException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -121,9 +122,11 @@ public class FileManagerService {
 	 * @param packageVersionID ID da versão do pacote ou atividade atual.
 	 * @param scriptModule     Enumerador que indica se estamos tratando um script
 	 *                         Único ou uma estrutura de arquivos e pastas.
-	 * @return FileModel[]	   Retorna um array com as informações das pasatas e arquivos do diretório.
+	 * @param pageable         paginação da collection
+	 * @return FileModel[] Retorna um array com as informações das pasatas e
+	 *         arquivos do diretório.
 	 */
-	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule) {
+	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = "";
 		if (pathInfoModels.length > 0) {
@@ -139,11 +142,11 @@ public class FileManagerService {
 
 		FileModel[] result;
 		if (packageVersionID != null) {
-			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript);
+			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript, pageable).toArray(new FileModel[0]);
 		} 
 		/* Quando o JsonSchema está utilizando a StorageInterface a versão do pacote é desconsiderada*/
 		else {
-			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, isUniqueScript);
+			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, isUniqueScript, pageable).toArray(new FileModel[0]);
 		}
 
 		return result;
@@ -152,15 +155,17 @@ public class FileManagerService {
 	/**
 	 * Função responsável por buscar o conteúdo temporário de um diretório.
 	 * 
-	 * @param argumentsModel
-	 * @param processID
-	 * @param processVersionID
-	 * @param packageID
-	 * @param tempDirID
-	 * @param scriptModule
+	 * @param argumentsModel   Argumentos.
+	 * @param processID        ID do processo atual.
+	 * @param processVersionID ID da versão do processo atual.
+	 * @param packageID        ID do pacote ou atividade atual.
+	 * @param tempDirID        ID do diretório temporário.
+	 * @param scriptModule     Enumerador que indica se estamos tratando um script
+	 *                         Único ou uma estrutura de arquivos e pastas.
+	 * @param pageable         paginação da collection
 	 * @return
 	 */
-	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule) {
+	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
 
 			if (!Utils.stringHasValue(tempDirID)) {
 				return new TempFileModel[0];
@@ -178,7 +183,7 @@ public class FileManagerService {
 				isUniqueScript = false;
 			}
 
-			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, isUniqueScript);
+			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, isUniqueScript, pageable).toArray(new TempFileModel[0]);
 
 			return result;
 	}

@@ -12,6 +12,9 @@ import javax.naming.directory.NoSuchAttributeException;
 import org.apache.avalon.framework.parameters.ParameterException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,10 +56,13 @@ public class FileManagerController {
 			@RequestHeader String processID,
 			@RequestHeader String processVersionID,
 			@RequestHeader String packageID,
-			@RequestHeader(required = false) String packageVersionID, /* Quando não enviado, a aplicaçã retorna todos os arquivos independete da versão. */
-			@RequestParam String arguments,
+			@RequestHeader(required = false) Integer page, /* Usado para fazer paginação do conteúdo caso necessário. */
+			@RequestHeader(required = false) Integer take, /* Usado para fazer paginação do conteúdo caso necessário. */
+			@RequestHeader(required = false) String packageVersionID, /* Quando não enviado, a aplicação retorna todos os arquivos independete da versão. */
 			@RequestHeader(required = false) String tempDirID,
-			@RequestHeader(required = false) ScriptModuleTypeEnum scriptModule
+			@RequestHeader(required = false) ScriptModuleTypeEnum scriptModule,
+
+			@RequestParam String arguments
 	) {
 		ResponseContentModel response = new ResponseContentModel();
 		ArgumentsModel argumentsModel = new Gson().fromJson(arguments, ArgumentsModel.class);
@@ -64,13 +70,18 @@ public class FileManagerController {
 
 		try {
 			if (command == FileManagerGetComandEum.GetDirContents) {
-				FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, scriptModule);
+				Pageable pageable = null;
+				if (page != null && take != null) {
+					pageable = PageRequest.of(page, take, Sort.by("dateCreated").descending());
+				}
+				
+				FileModel[] tempResult = this.fileManagerService.getTempDirContent(argumentsModel, processID, processVersionID, packageID, tempDirID, scriptModule, pageable);
 				boolean tempDirExist = this.fileManagerService.tempDirExist(tempDirID);
 				if (tempResult.length > 0 || tempDirExist) {
 					response.setSuccess(true);
 					response.setResult(tempResult);
 				} else {
-					FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID, scriptModule);
+					FileModel[] result = this.fileManagerService.getDirContent(argumentsModel, processID, processVersionID, packageID, packageVersionID, scriptModule, pageable);
 					response.setSuccess(true);
 					response.setResult(result);
 
@@ -82,7 +93,6 @@ public class FileManagerController {
 			}
 
 			if (command == FileManagerGetComandEum.GetFileContent) {
-
 				String result = this.fileManagerService.getFileContent(argumentsModel, tempDirID);
 				response.setStrResult(result);
 			}
