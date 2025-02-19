@@ -1,5 +1,8 @@
 package br.com.tx.storageInterface.repository;
 
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
@@ -11,10 +14,10 @@ public interface IFilesRepository extends MongoRepository<FileModel, String> {
 	public FileModel[] findFiles(String processID, String processVersionID, String packageID, String parentKey, String packageVersionID);
 
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3, 'fileInfoModel.packageVersionID': ?4, 'isScriptUnique': ?5, 'fileInfoModel.deleted': false }")
-	public FileModel[] findFiles(String processID, String processVersionID, String packageID, String parentKey, String packageVersionID, boolean isUniqueScript);
+	public List<FileModel> findFiles(String processID, String processVersionID, String packageID, String parentKey, String packageVersionID, boolean isUniqueScript,  Pageable pageable);
 
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3, 'isScriptUnique': ?4, 'fileInfoModel.deleted': false }")
-	public FileModel[] findFiles(String processID, String processVersionID, String packageID, String parentKey, boolean isUniqueScript);
+	public List<FileModel> findFiles(String processID, String processVersionID, String packageID, String parentKey, boolean isUniqueScript, Pageable pageable);
 
 //	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'fileInfoModel.tempDirID': ?4, 'fileInfoModel.packageVersionID': ?5, 'fileInfoModel.deleted': false,  }")
 //	public FileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, String packageVersionID);

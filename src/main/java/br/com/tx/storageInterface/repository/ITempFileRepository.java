@@ -1,5 +1,8 @@
 package br.com.tx.storageInterface.repository;
 
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
@@ -14,7 +17,7 @@ public interface ITempFileRepository extends MongoRepository<TempFileModel, Stri
 	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID);
 	
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'isScriptUnique': ?5, 'fileInfoModel.deleted': false }")
-	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, boolean isScriptUnique);
+	public List<TempFileModel> findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, boolean isScriptUnique, Pageable pageable);
 	
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.packageVersionID': ?3}")
 	public TempFileModel[] findBypackageID(String processID, String processVersionID, String packageID, String packageVersionID);
