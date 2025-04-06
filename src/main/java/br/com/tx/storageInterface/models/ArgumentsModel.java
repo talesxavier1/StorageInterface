@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 import com.google.gson.Gson;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Modelo que representa o detalhamento do diretório ou arquivo recebido do front.
  */
@@ -38,10 +40,14 @@ public class ArgumentsModel implements Serializable {
 	/**
 	 * Json que representa a classe ChunkMetadataModel.
 	 */
+	//WARNING ** Manter o json do exemple igual ao json que representa a classe ChunkMetadataModel. **
+	//WARNING ** a propriedade partByte pode ser ignorada. **
+	@Schema(description = "JSON que representa a classe ChunkMetadataModel", example = "{\"UploadId\":\"\",\"FileName\":\"\",\"Index\":0,\"TotalCount\":0,\"FileSize\":0}")
 	private String chunkMetadata;
 	/**
 	 * Classe com o detalhameto do chunk de arquivo enviado.
 	 */
+	@Schema(hidden = true)
 	private ChunkMetadataModel classChunkMetadata;
 	/**
 	 * Indica que a classe está tratando de um diretório.
@@ -63,6 +69,10 @@ public class ArgumentsModel implements Serializable {
 
 	public ChunkMetadataModel getClassChunkMetadata() {
 		return this.classChunkMetadata;
+	}
+
+	public void setClassChunkMetadata(ChunkMetadataModel classChunkMetadata) {
+		this.classChunkMetadata = classChunkMetadata;
 	}
 
 	public boolean isDirectory() {

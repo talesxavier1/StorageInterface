@@ -24,6 +24,7 @@ import com.google.gson.Gson;
 import br.com.tx.storageInterface.Utils.Utils;
 import br.com.tx.storageInterface.enums.DriveContextEnum;
 import br.com.tx.storageInterface.enums.ScriptModuleTypeEnum;
+import br.com.tx.storageInterface.models.APIContextModel;
 import br.com.tx.storageInterface.models.ArgumentsModel;
 import br.com.tx.storageInterface.models.ChunkMetadataModel;
 import br.com.tx.storageInterface.models.FileInfoModel;
@@ -126,7 +127,7 @@ public class FileManagerService {
 	 * @return FileModel[] Retorna um array com as informações das pasatas e
 	 *         arquivos do diretório.
 	 */
-	public FileModel[] getDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String packageVersionID, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
+	public FileModel[] getDirContent(ArgumentsModel argumentsModel, APIContextModel apiContextModel, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = "";
 		if (pathInfoModels.length > 0) {
@@ -141,12 +142,27 @@ public class FileManagerService {
 		}
 
 		FileModel[] result;
-		if (packageVersionID != null) {
-			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, packageVersionID, isUniqueScript, pageable).toArray(new FileModel[0]);
+		if (apiContextModel.getProcessVersionID() != null) {
+			result = dbService.getFilesRepository().findFiles(
+					apiContextModel.getProcessID(), 
+					apiContextModel.getProcessVersionID(), 
+					apiContextModel.getPackageID(), 
+					key,
+					apiContextModel.getPackageVersionID(), 
+					isUniqueScript, 
+					pageable
+			).toArray(new FileModel[0]);
 		} 
 		/* Quando o JsonSchema está utilizando a StorageInterface a versão do pacote é desconsiderada*/
 		else {
-			result = dbService.getFilesRepository().findFiles(processID, processVersionID, packageID, key, isUniqueScript, pageable).toArray(new FileModel[0]);
+			result = dbService.getFilesRepository().findFiles(
+							apiContextModel.getProcessID(), 
+							apiContextModel.getProcessVersionID(), 
+							apiContextModel.getPackageID(), 
+							key, 
+							isUniqueScript, 
+							pageable
+			).toArray(new FileModel[0]);
 		}
 
 		return result;
@@ -155,19 +171,16 @@ public class FileManagerService {
 	/**
 	 * Função responsável por buscar o conteúdo temporário de um diretório.
 	 * 
-	 * @param argumentsModel   Argumentos.
-	 * @param processID        ID do processo atual.
-	 * @param processVersionID ID da versão do processo atual.
-	 * @param packageID        ID do pacote ou atividade atual.
-	 * @param tempDirID        ID do diretório temporário.
-	 * @param scriptModule     Enumerador que indica se estamos tratando um script
-	 *                         Único ou uma estrutura de arquivos e pastas.
-	 * @param pageable         paginação da collection
+	 * @param argumentsModel  Argumentos.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @param scriptModule    Enumerador que indica se estamos tratando um script
+	 *                        Único ou uma estrutura de arquivos e pastas.
+	 * @param pageable        paginação da collection
 	 * @return
 	 */
-	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
+	public TempFileModel[] getTempDirContent(ArgumentsModel argumentsModel, APIContextModel apiContextModel, ScriptModuleTypeEnum scriptModule, Pageable pageable) {
 
-			if (!Utils.stringHasValue(tempDirID)) {
+			if (!Utils.stringHasValue(apiContextModel.getTempDirID())) {
 				return new TempFileModel[0];
 			}
 			PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
@@ -183,19 +196,42 @@ public class FileManagerService {
 				isUniqueScript = false;
 			}
 
-			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, key, tempDirID, isUniqueScript, pageable).toArray(new TempFileModel[0]);
-
+			TempFileModel[] result = dbService.getTempFileRepository().findTempFiles(
+					apiContextModel.getProcessID(), 
+					apiContextModel.getProcessVersionID(),
+					apiContextModel.getPackageID(),
+					key, 
+					apiContextModel.getTempDirID(), 
+					isUniqueScript, 
+					pageable).toArray(new TempFileModel[0]);
 			return result;
 	}
 
-	public boolean tempDirExist(String tempDirID) {
-		return dbService.getTempFileRepository().tempDirExistV2(tempDirID);
+	/**
+	 * Função responsável por consultar a existência de um diretório temporário.
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return boolean Retorna true quando existe.
+	 */
+	public boolean tempDirExist(APIContextModel apiContextModel) {
+		return dbService.getTempFileRepository().tempDirExistV2(apiContextModel.getTempDirID());
 	}
 
+	/**
+	 * Função responsável por criar um diretório temporário.
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna true quando criado.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean createTempDirContent(String processID, String processVersionID, String packageID,String packageVersionID, String tempDirID) {
+	public boolean createTempDirContent(APIContextModel apiContextModel) {
 		
-		FileModel[] result = this.dbService.getFilesRepository().findBypackageID(processID, processVersionID, packageID, packageVersionID);
+		FileModel[] result = this.dbService.getFilesRepository().findBypackageID(
+				apiContextModel.getProcessID(), 
+				apiContextModel.getProcessVersionID(),
+				apiContextModel.getPackageID(), 
+				apiContextModel.getPackageVersionID()
+		);
 		
 		List<FileModel> listResult = Arrays.asList(result);
 
@@ -205,7 +241,7 @@ public class FileManagerService {
 			TempFileModel newTempFileModel = gson.fromJson(strFileModel, TempFileModel.class);
 			
 			newTempFileModel.set_id(UUID.randomUUID().toString());
-			newTempFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setTempDirID(apiContextModel.getTempDirID());
 			newTempFileModel.setTempDirDate(Utils.getDateNow());
 			return newTempFileModel;
 		}).toList();
@@ -215,7 +251,18 @@ public class FileManagerService {
 		return true;
 	}
 
-	public String getFileContent(ArgumentsModel argumentsModel, String tempDirID) throws NoSuchAttributeException, GeneralSecurityException, IOException {
+	/**
+	 * Função responsável por buscar o conteúdo de um arquivo de texto.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna o conteúdo do arquivo texto.
+	 * 
+	 * @throws NoSuchAttributeException Quando não é possível obter o keyID da classe argumentsModel.
+	 * @throws GeneralSecurityException Quando não é possível fazer a autenticação no serviço do google.
+	 * @throws IOException Quando o arquivo que está sendo acessado não está armazenado no google gmail.
+	 */
+	public String getFileContent(ArgumentsModel argumentsModel, APIContextModel apiContextModel) throws NoSuchAttributeException, GeneralSecurityException, IOException {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 
 			String keyID = null;
@@ -230,8 +277,8 @@ public class FileManagerService {
 
 			FileModel fileModel = null;
 
-			if (Utils.stringHasValue(tempDirID)) {
-				fileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+			if (Utils.stringHasValue(apiContextModel.getTempDirID())) {
+				fileModel = dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, apiContextModel.getTempDirID());
 			}
 			if (fileModel == null) {
 				fileModel = dbService.getFilesRepository().findByKeyID(keyID);
@@ -254,8 +301,15 @@ public class FileManagerService {
 			return result;
 	}
 
+	/**
+	 * Função resposável por renomear um diretório ou arquivo.
+	 * 
+	 * @param argumentsModel  Argumentos da requisião.
+	 * @param apiContextModel IDs da requisição.
+	 * @return Retorna true quando foi alterado.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean renameFile(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean renameFile(ArgumentsModel argumentsModel, APIContextModel apiContextModel) {
 		
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		if (pathInfoModels.length == 0) { return false; }
@@ -267,7 +321,7 @@ public class FileManagerService {
 		String keyID = keySplit[keySplit.length - 1];
 		if(!Utils.stringHasValue(keyID)) { return false; }
 		
-		TempFileModel fileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+		TempFileModel fileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, apiContextModel.getTempDirID());
 		if(fileModel == null) { return false; }
 		
 		fileModel.setName(argumentsModel.getName());
@@ -276,26 +330,39 @@ public class FileManagerService {
 		return true;
 	}
 
+	/**
+	 * Função resonsável por fazer a exclusão lógica de um diretório ou arquivo.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna true quando excluído.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean logicalDeletion(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean logicalDeletion(ArgumentsModel argumentsModel, APIContextModel apiContextModel) {
 		PathInfoModel[] pathInfoModels = argumentsModel.getPathInfo();
 		String key = pathInfoModels[pathInfoModels.length - 1].getKey();
 		String[] splitKey = key.split("/");
 		String keyID = splitKey[splitKey.length - 1];
 		
-		TempFileModel fileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, tempDirID);
+		TempFileModel fileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(keyID, apiContextModel.getTempDirID());
 		if(fileModel == null) {return false;}
 		
-		FilelHierarchyModel filelHierarchyModel =  buildFilelHierarchy(processID, processVersionID, packageID, fileModel, tempDirID);
+		FilelHierarchyModel filelHierarchyModel = buildFilelHierarchy(apiContextModel, fileModel);
 		logicalDeleteHierarchyModel(filelHierarchyModel);
 		
 		String parentKey = fileModel.getFileInfoModel().getParentKey();
 		if (Utils.stringHasValue(parentKey)) {
-			long parentChildsQuantity = this.dbService.getTempFileRepository().countByKey(processID, processVersionID, packageID, parentKey, tempDirID);
+			long parentChildsQuantity = this.dbService.getTempFileRepository().countByKey(
+					apiContextModel.getProcessID(), 
+					apiContextModel.getProcessVersionID(),
+					apiContextModel.getPackageID(), 
+					parentKey, 
+					apiContextModel.getTempDirID()
+			);
 			if (parentChildsQuantity > 0 && fileModel.getIsDirectory()) {
 				String[] splitParentKey = parentKey.split("/");
 				String parentkeyID = splitParentKey[splitParentKey.length - 1];
-				TempFileModel parentFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentkeyID, tempDirID);
+				TempFileModel parentFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentkeyID, apiContextModel.getTempDirID());
 				parentFileModel.setHasSubDirectories(false);
 				this.dbService.getTempFileRepository().save(parentFileModel);
 			}	
@@ -305,8 +372,15 @@ public class FileManagerService {
 		return true;
 	}
 	
+	/**
+	 * Função responsável por fazer a cópia de um arquivo ou diretório.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna true quando copiado.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean copy(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean copy(ArgumentsModel argumentsModel, APIContextModel apiContextModel) {
 
 		try {
 			PathInfoModel destinationPathInfoModel = null;
@@ -323,7 +397,11 @@ public class FileManagerService {
 			}
 			if(sourcePathInfo == null) { return false; }
 
-			FilelHierarchyModel filelHierarchyModel = buildFilelHierarchy(processID, processVersionID, packageID, sourcePathInfo.getKey(), null, tempDirID);
+			FilelHierarchyModel filelHierarchyModel = buildFilelHierarchy(
+					apiContextModel,
+					sourcePathInfo.getKey(), 
+					null
+			);
 
 			if (destinationPathInfoModel != null) {
 				
@@ -332,7 +410,7 @@ public class FileManagerService {
 					String[] destinationKeySplit = destinationKey.split("/");
 					String destinationKeyID = destinationKeySplit[destinationKeySplit.length - 1];
 
-					TempFileModel destinationFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(destinationKeyID, tempDirID);
+					TempFileModel destinationFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(destinationKeyID, apiContextModel.getTempDirID());
 					if (destinationFileModel != null) {
 						destinationFileModel.setHasSubDirectories(true);
 						this.dbService.getTempFileRepository().save(destinationFileModel);
@@ -354,8 +432,15 @@ public class FileManagerService {
 		return true;
 	}
 
+	/**
+	 * Função resposável por mover um arquivo ou diretório.
+	 * 
+	 * @param argumentsModel  Argumantos da requisição.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return retorna true quando movido.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean move(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean move(ArgumentsModel argumentsModel, APIContextModel apiContextModel) {
 
 		try {
 			PathInfoModel destinationPathInfoModel = null;
@@ -372,7 +457,7 @@ public class FileManagerService {
 			}
 			if(sourcePathInfo == null) { return false; }
 			
-			FilelHierarchyModel filelHierarchyModel = buildFilelHierarchy(processID, processVersionID, packageID, sourcePathInfo.getKey(), null, tempDirID);
+			FilelHierarchyModel filelHierarchyModel = buildFilelHierarchy(apiContextModel, sourcePathInfo.getKey(), null);
 			String oldParentKey = filelHierarchyModel.getSourceFileModel().getFileInfoModel().getParentKey();
 			
 			if (destinationPathInfoModel != null) {
@@ -380,7 +465,7 @@ public class FileManagerService {
 				String[] destinationKeySplit = destinationKey.split("/");
 				String destinationKeyID = destinationKeySplit[destinationKeySplit.length - 1];
 
-				TempFileModel destinationFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(destinationKeyID, tempDirID);
+				TempFileModel destinationFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(destinationKeyID, apiContextModel.getTempDirID());
 				boolean sourceFileModelIsDorectory = filelHierarchyModel.getSourceFileModel().getIsDirectory();
 				destinationFileModel.setHasSubDirectories(sourceFileModelIsDorectory);
 				this.dbService.getTempFileRepository().save(destinationFileModel);
@@ -393,11 +478,17 @@ public class FileManagerService {
 			this.savetFilelHierarchyModel(filelHierarchyModel);
 
 			if (Utils.stringHasValue(oldParentKey)) {
-				long parentChildsQuantity = this.dbService.getTempFileRepository().countByParentKey(processID, processVersionID, packageID, oldParentKey, tempDirID);
+				long parentChildsQuantity = this.dbService.getTempFileRepository().countByParentKey(
+						apiContextModel.getProcessID(), 
+						apiContextModel.getProcessVersionID(),
+						apiContextModel.getPackageID(), 
+						oldParentKey, 
+						apiContextModel.getTempDirID()
+				);
 				if(parentChildsQuantity == 0 && filelHierarchyModel.getSourceFileModel().getIsDirectory()) {
 					String[] splitParentKey = oldParentKey.split("/");
 					String parentKeyID = splitParentKey[splitParentKey.length - 1];
-					TempFileModel parentFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentKeyID, tempDirID);
+					TempFileModel parentFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(parentKeyID, apiContextModel.getTempDirID());
 					parentFileModel.setHasSubDirectories(false);
 					this.dbService.getTempFileRepository().save(parentFileModel);
 				}	
@@ -412,11 +503,21 @@ public class FileManagerService {
 		return true;
 	}
 	
+	/**
+	 * Função responsável por fazer o upload de um arquivo. 
+	 * Quando a requisição manda uma parte do chunck a função armazena essa parte até que a ultima chegue para  que o upload seja feito.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param chunk           Chunck do arquivo.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna true quando o arquivo é enviado para o drive ou quando a
+	 *         parte do arquivo é armazenada no banco.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean uploadChunk(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean uploadChunk(ArgumentsModel argumentsModel, MultipartFile chunk, APIContextModel apiContextModel) {
 		try {
 			if (argumentsModel.getClassChunkMetadata().getTotalCount() > 1) {
-				this.appendPartChunck(chunk, argumentsModel.getClassChunkMetadata());
+				this.appendPartChuck(chunk, argumentsModel.getClassChunkMetadata());
 
 				boolean completed = this.partChunksCompleted(argumentsModel.getClassChunkMetadata());
 				if (!completed) {
@@ -454,9 +555,9 @@ public class FileManagerService {
 				
 			
 			FileInfoModel newFileInfoModel = new FileInfoModel();
-			newFileInfoModel.setProcessID(processID);
-			newFileInfoModel.setProcessVersionID(processVersionID);
-			newFileInfoModel.setPackageID(packageID);
+			newFileInfoModel.setProcessID(apiContextModel.getProcessID());
+			newFileInfoModel.setProcessVersionID(apiContextModel.getProcessVersionID());
+			newFileInfoModel.setPackageID(apiContextModel.getPackageID());
 			newFileInfoModel.setDefaultAccount(storageDefaultAccout);
 			newFileInfoModel.setDeleted(false);
 			newFileInfoModel.setStorageType(storageType);
@@ -482,7 +583,7 @@ public class FileManagerService {
 			newTempFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
 			newTempFileModel.setHasSubDirectories(false);
 			newTempFileModel.setTempDirDate(Utils.getDateNow());
-			newTempFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setTempDirID(apiContextModel.getTempDirID());
 			newTempFileModel.setScriptUnique(false);
 
 			this.dbService.getTempFileRepository().insert(newTempFileModel);
@@ -494,7 +595,15 @@ public class FileManagerService {
 		}
 	}
 	
-	public String download(ArgumentsModel argumentsModel, String processID, String processVersionID, String packageID, String tempDirID) throws GeneralSecurityException, IOException {
+	/**
+	 * Função responsável por fazer o dowload do arquivo no drive.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna o path do arquivo temporário criado.
+	 * @throws GeneralSecurityException Quando não é possível fazer a autenticação no gmail.
+	 */
+	public String download(ArgumentsModel argumentsModel, APIContextModel apiContextModel) throws GeneralSecurityException {
 
 		PathInfoModel[] infoModels = argumentsModel.getPathInfo();
 		PathInfoModel pathInfoModel = infoModels[infoModels.length - 1];
@@ -506,7 +615,7 @@ public class FileManagerService {
 		String fileName = null;
 		DriveContextEnum storageType = null;
 		
-		TempFileModel tempFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
+		TempFileModel tempFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, apiContextModel.getTempDirID());
 		if(tempFileModel != null) {
 			driveFileID = tempFileModel.getFileInfoModel().getFileDriveID();
 			fileName = tempFileModel.getName();
@@ -531,8 +640,16 @@ public class FileManagerService {
 		return tempFilePath;
 	}
 
+	/**
+	 * Função responsável por fazer o update do conteúdo de um arquivo de texto.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param chunk           Chunk do arquivo.
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna true quando o conteúdo foi atualizado.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean updateFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) {
+	public boolean updateFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, APIContextModel apiContextModel) {
 
 		try {
 			PathInfoModel[] infoModels = argumentsModel.getPathInfo();
@@ -541,7 +658,7 @@ public class FileManagerService {
 			String[] fileKeySplit = fileKey.split("/");
 			String fileKeyID = fileKeySplit[fileKeySplit.length - 1];
 
-			TempFileModel tempFile = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, tempDirID);
+			TempFileModel tempFile = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileKeyID, apiContextModel.getTempDirID());
 			if (tempFile == null) {
 				throw new NoSuchAttributeException("Não foi possível encontrar tempFile.");
 			}
@@ -569,6 +686,11 @@ public class FileManagerService {
 
 	}
 
+	/**
+	 * Função responsável por fazer o insert de TempFileModel.
+	 * 
+	 * @param filelHierarchyModel Hierarquia de TempFileModel.
+	 */
 	public void insertFilelHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
 		dbService.getTempFileRepository().insert(filelHierarchyModel.getSourceFileModel());
 		for (FilelHierarchyModel child : filelHierarchyModel.getChildsFileModel()) {
@@ -576,6 +698,11 @@ public class FileManagerService {
 		}
 	}
 
+	/**
+	 * Função responsável por fazer o save de TempFileModel
+	 * 
+	 * @param filelHierarchyModel Hierarquia de TempFileModel.
+	 */
 	public void savetFilelHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
 		dbService.getTempFileRepository().save(filelHierarchyModel.getSourceFileModel());
 		for (FilelHierarchyModel child : filelHierarchyModel.getChildsFileModel()) {
@@ -583,6 +710,11 @@ public class FileManagerService {
 		}
 	}
 
+	/**
+	 * Função responsável por fazer a exclusão lógica de TempFileModel
+	 * 
+	 * @param filelHierarchyModel Hierarquia de TempFileModel.
+	 */
 	public void logicalDeleteHierarchyModel(FilelHierarchyModel filelHierarchyModel) {
 		TempFileModel fileModel = filelHierarchyModel.getSourceFileModel();
 		fileModel.getFileInfoModel().setDeleted(true);
@@ -593,10 +725,16 @@ public class FileManagerService {
 		}
 	}
     
+	/**
+	 * Função responsável por fazer a exclusão de todos os arquivos e diretórios temporários.
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return retorna true quando deletados.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public boolean deleteTempDir(String tempDirID) {
+	public boolean deleteTempDir(APIContextModel apiContextModel) {
 		try {
-			this.dbService.getTempFileRepository().deleteByTempDirId(tempDirID);
+			this.dbService.getTempFileRepository().deleteByTempDirId(apiContextModel.getTempDirID());
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -605,10 +743,16 @@ public class FileManagerService {
 		}
 	}
 	
+	/**
+	 * Funcção responsável por publicar um diretório temporário.
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @return Retorna o novo PackageVersionID.
+	 */
 	@Transactional(rollbackFor = Exception.class)
-	public String pubTempDir(String tempDirID) {
+	public String pubTempDir(APIContextModel apiContextModel) {
 		try {
-			TempFileModel[] findResult = this.dbService.getTempFileRepository().findByTempDirID(tempDirID);
+			TempFileModel[] findResult = this.dbService.getTempFileRepository().findByTempDirID(apiContextModel.getTempDirID());
 			if (findResult.length == 0) {
 				throw new Error("TempDir content não encontrados.");
 			}
@@ -627,7 +771,7 @@ public class FileManagerService {
 
 			this.dbService.getFilesRepository().insert(newResult);
 
-			boolean result = this.deleteTempDir(tempDirID);
+			boolean result = this.deleteTempDir(apiContextModel);
 			if (!result) {
 				throw new Error("Não foi possível deletar diretorio temporário.");
 			}
@@ -639,11 +783,22 @@ public class FileManagerService {
 		}
 	}
 
-	public boolean saveFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, String processID, String processVersionID, String packageID, String tempDirID) throws IOException, ParameterException, GeneralSecurityException {
+	/**
+	 * Função responsável por salvar um arquivo de texto no googleGmail.
+	 * 
+	 * @param argumentsModel  Argumentos da requisição.
+	 * @param chunk           Arquivo.
+	 * @param apiContextModel IDs de contextp da requisição
+	 * @return Retorna truen quando salvo.
+	 * @throws IOException Quando não é possível obter o mimetype ou obter os bytes do chunck.
+	 * @throws GeneralSecurityException Quando não é possível fazer a autenticação no google Gmail.
+	 */
+	public boolean saveFileContent(ArgumentsModel argumentsModel, MultipartFile chunk, APIContextModel apiContextModel)
+			throws IOException,  GeneralSecurityException {
 	
 			String mimeType = Utils.getFileMimeType(chunk);
 			if (!mimeType.contains("text")) {
-				throw new ParameterException("Não é possível atualizar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
+				throw new IOException("Não é possível atualizar o conteúdo. Tipo de conteúdo recebido: " + mimeType);
 			}
 
 			GoogleGmailService drive = new GoogleGmailService();
@@ -653,9 +808,9 @@ public class FileManagerService {
 			var fileDriveID = drive.addMessage(strChunk, argumentsModel.getClassChunkMetadata().getFileName());
 
 			FileInfoModel newFileInfoModel = new FileInfoModel();
-			newFileInfoModel.setProcessID(processID);
-			newFileInfoModel.setProcessVersionID(processVersionID);
-			newFileInfoModel.setPackageID(packageID);
+			newFileInfoModel.setProcessID(apiContextModel.getProcessID());
+			newFileInfoModel.setProcessVersionID(apiContextModel.getProcessVersionID());
+			newFileInfoModel.setPackageID(apiContextModel.getPackageID());
 			newFileInfoModel.setDefaultAccount(drive.getDefaultAccout());
 			newFileInfoModel.setDeleted(false);
 			newFileInfoModel.setStorageType(DriveContextEnum.GOOGLE_GMAIL);
@@ -672,12 +827,10 @@ public class FileManagerService {
 			newTempFileModel.setSize(argumentsModel.getClassChunkMetadata().getFileSize());
 			newTempFileModel.setHasSubDirectories(false);
 			newTempFileModel.setTempDirDate(Utils.getDateNow());
-			newTempFileModel.setTempDirID(tempDirID);
+			newTempFileModel.setTempDirID(apiContextModel.getTempDirID());
 			newTempFileModel.setScriptUnique(true);
 
 			dbService.getTempFileRepository().save(newTempFileModel);
-
-		
 
 		return true;
 	}
@@ -686,7 +839,16 @@ public class FileManagerService {
 	@Autowired
 	private MongoDBService dbService;
 
-	private FilelHierarchyModel buildFilelHierarchy(String processID, String processVersionID, String packageID, String key, String keyID, String tempDirID) {
+	/**
+	 * Função responsável por montar uma hierarquia de TempFiles com base em uma key
+	 * ou KeyID
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @param key             Key do diretório ou arquivo.
+	 * @param keyID           KeyID do diretório ou arquivo.
+	 * @return Retorna o FilelHierarchyModel
+	 */
+	private FilelHierarchyModel buildFilelHierarchy(APIContextModel apiContextModel, String key, String keyID) {
 		if (!Utils.stringHasValue(key) && !Utils.stringHasValue(keyID)) {
 			throw new NullPointerException("Não é posível busca FileModel. keyID e KEY nulos");
 		}
@@ -697,21 +859,34 @@ public class FileManagerService {
 			fileDirID = splitKey[splitKey.length - 1];
 		}
 		
-		TempFileModel sourceFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileDirID, tempDirID);
+		TempFileModel sourceFileModel = this.dbService.getTempFileRepository().findByKeyIDAndTempDirID(fileDirID, apiContextModel.getTempDirID());
 		if(sourceFileModel == null) {return null;}
 		
-		return this.buildFilelHierarchy(processID, processVersionID, packageID, sourceFileModel, tempDirID);
+		return this.buildFilelHierarchy(apiContextModel, sourceFileModel);
 	}
 
-	private FilelHierarchyModel buildFilelHierarchy(String processID, String processVersionID, String packageID, TempFileModel sourceFileModel, String tempDirID) {
+	/**
+	 * Função responsável por montar uma hierarquia de TempFiles com base em um TempFileModel
+	 * 
+	 * @param apiContextModel IDs de contexto da requisição.
+	 * @param sourceFileModel TempFileModel pai 
+	 * @return Retorna o FilelHierarchyModel
+	 */ 
+	private FilelHierarchyModel buildFilelHierarchy(APIContextModel apiContextModel, TempFileModel sourceFileModel) {
 		
 		var newFilelHierarchyModel = new FilelHierarchyModel();
 		newFilelHierarchyModel.setSourceFileModel(sourceFileModel);
 		
 		var childsFileModelList = new ArrayList<FilelHierarchyModel>();
-		TempFileModel[] childsFileModel = this.dbService.getTempFileRepository().findTempFiles(processID, processVersionID, packageID, sourceFileModel.getKey(), tempDirID);
+		TempFileModel[] childsFileModel = this.dbService.getTempFileRepository().findTempFiles(
+				apiContextModel.getProcessID(), 
+				apiContextModel.getProcessVersionID(),
+				apiContextModel.getPackageID(), 
+				sourceFileModel.getKey(), 
+				apiContextModel.getTempDirID()
+		);
 		for (TempFileModel child : childsFileModel) {
-			var childFilelHierarchyModel = buildFilelHierarchy(processID, processVersionID, packageID, child, tempDirID );
+			var childFilelHierarchyModel = buildFilelHierarchy(apiContextModel, child);
 			childsFileModelList.add(childFilelHierarchyModel);
 		}
 		newFilelHierarchyModel.setChildsFileModel(childsFileModelList);
@@ -719,12 +894,26 @@ public class FileManagerService {
 		return newFilelHierarchyModel;
 	}
 
-	private boolean appendPartChunck(MultipartFile chunk, ChunkMetadataModel chunkMetadataModel) throws IOException {
+	/**
+	 * Função responsável por arquivar o chunck part no mongodb.
+	 * 
+	 * @param chunk              chunk part
+	 * @param chunkMetadataModel Classe com as informaçõe do chuck
+	 * @return retorna true quando salvo.
+	 * @throws IOException Quando não é possível obter os bytes do chuck
+	 */
+	private boolean appendPartChuck(MultipartFile chunk, ChunkMetadataModel chunkMetadataModel) throws IOException {
 		chunkMetadataModel.setPartByte(chunk.getBytes());
 		this.dbService.getTempChunckPartInfoRepository().insert(chunkMetadataModel);
 		return true;
 	}
 
+	/**
+	 * Função responsável por verificar se todas as partes dos chucks chegaram.
+	 * 
+	 * @param chunkMetadataModel Propriedades do chuck atual.
+	 * @return retorna true quando todos os chuck estão no mongo.
+	 */
 	private boolean partChunksCompleted(ChunkMetadataModel chunkMetadataModel) {
 		long result = this.dbService.getTempChunckPartInfoRepository().countChunckParts(chunkMetadataModel.getUploadId());
 		if(result == chunkMetadataModel.getTotalCount()) {
@@ -733,6 +922,14 @@ public class FileManagerService {
 		return false;
 	}
 
+	/**
+	 * Função responsável por unir os chucks parts.
+	 * 
+	 * @param UploadId  Id de upload dos chucks
+	 * @param lastChunk último chuk.
+	 * @return Retorna um MultipartFile unificado.
+	 * @throws IOException Quando não é possível obter os bytes do chuck
+	 */
 	private MultipartFile getMergedChunksParts(String UploadId, MultipartFile lastChunk) throws IOException {
 		ChunkMetadataModel[] results = this.dbService.getTempChunckPartInfoRepository().getChunkMetadataByUploadId(UploadId);
 		
