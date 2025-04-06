@@ -38,7 +38,7 @@ public class GoogleDriveService {
 	 * @throws GeneralSecurityException Quando não é possível autenticar a conta google.
 	 * @throws IOException Quando não é possivel criar algum arquivo necessário para a autenticação com o google.
 	 */
-	public GoogleDriveService() throws GeneralSecurityException, IOException {
+	public GoogleDriveService() throws GeneralSecurityException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
 		this.defaultAccout = "npcpk1999.drive01@gmail.com";

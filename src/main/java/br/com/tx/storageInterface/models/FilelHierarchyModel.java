@@ -14,7 +14,7 @@ public class FilelHierarchyModel {
 	private List<FilelHierarchyModel> childsFileModel;
 
 	/**
-	 * Atualiza o setKeyID do sourceFileModel e todos seus filhos.
+	 * Atualiza o KeyID do sourceFileModel e todos seus filhos.
 	 * 
 	 * @param newID     Novo ID do sourceFileModel
 	 * @param parentKey Novo parentKey do sourceFileModel. (Pode ser passado nulo quando não tem pai.)

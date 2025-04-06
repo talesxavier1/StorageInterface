@@ -41,7 +41,7 @@ public class GoogleGmailService {
 	 * @throws GeneralSecurityException Quado não é pissível obter o Drive do Gmail.
 	 * @throws IOException Quando algum arquivo necessário para criar o drive do Gmail não pode ser lido.
 	 */
-	public GoogleGmailService() throws GeneralSecurityException, IOException {
+	public GoogleGmailService() throws GeneralSecurityException {
 		var springContext = SpringContext.getSpringContext();
 		this.dbService = springContext.getBean(MongoDBService.class);
 		this.defaultAccout = "npcpk1999.drive01@gmail.com";
