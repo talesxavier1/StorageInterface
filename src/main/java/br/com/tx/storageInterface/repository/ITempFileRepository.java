@@ -1,5 +1,8 @@
 package br.com.tx.storageInterface.repository;
 
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
@@ -10,8 +13,11 @@ public interface ITempFileRepository extends MongoRepository<TempFileModel, Stri
 	@Query("{ 'keyID': ?0, 'tempDirID': ?1}")
 	public TempFileModel findByKeyIDAndTempDirID(String keyID, String tempDirID);
 
-	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'fileInfoModel.packageVersionID': ?5, 'fileInfoModel.deleted': false }")
-	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, String packageVersionID);
+	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'fileInfoModel.deleted': false }")
+	public TempFileModel[] findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID);
+	
+	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3,'tempDirID': ?4, 'isScriptUnique': ?5, 'fileInfoModel.deleted': false }")
+	public List<TempFileModel> findTempFiles(String processID, String processVersionID, String packageID, String parentKey, String tempDirID, boolean isScriptUnique, Pageable pageable);
 	
 	@Query("{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.packageVersionID': ?3}")
 	public TempFileModel[] findBypackageID(String processID, String processVersionID, String packageID, String packageVersionID);
@@ -24,4 +30,20 @@ public interface ITempFileRepository extends MongoRepository<TempFileModel, Stri
 	
 	@Query(value = "{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'fileInfoModel.parentKey': ?3, 'tempDirID': ?4, 'fileInfoModel.deleted': false, 'isDirectory': true }", count = true)
 	public long countByParentKey(String processID, String processVersionID, String packageID, String parentKey, String tempDirID);
+
+	@Query(value = "{ 'fileInfoModel.processID': ?0, 'fileInfoModel.processVersionID': ?1, 'fileInfoModel.packageID': ?2, 'key': ?3, 'tempDirID': ?4, 'fileInfoModel.deleted': false, 'isDirectory': true }", count = true)
+	public long countByKey(String processID, String processVersionID, String packageID, String key, String tempDirID);
+
+	@Deprecated
+	/**
+	 * @deprecated Quando o arquivo ou diretório é o último e ele é deletado, o
+	 *             tempdir ainda existe, mas não retorna nada.
+	 *             "'fileInfoModel.deleted': false" faz com que o processo crie o
+	 *             diretório temporário novamete.
+	 */
+	@Query(value = "{ 'tempDirID': ?0, 'fileInfoModel.deleted': false }", exists = true)
+	public boolean tempDirExist(String tempDirID);
+
+	@Query(value = "{ 'tempDirID': ?0 }", exists = true)
+	public boolean tempDirExistV2(String tempDirID);
 }

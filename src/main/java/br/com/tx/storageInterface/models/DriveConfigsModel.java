@@ -1,19 +1,78 @@
 package br.com.tx.storageInterface.models;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import br.com.tx.storageInterface.enums.DriveContextEnum;
+
 @Document(collection = "DriveConfigs")
-public class DriveConfigsModel {
+/** Classe que representa as configuraçoes dos serviços de armazenamento. */
+public class DriveConfigsModel implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	@Id
 	private String _id;
 
+	/** Conta de email do serviço de armazenamento. */
 	private String emailContaPrincipal;
-	private String emailContaServico;
-	private String strJsonClientSecret;
+
+	/** Serviço de armazenamento. */
+	private DriveContextEnum driveContext;
+
+	/** Refresh token do serviço. */
+	private String refreshToken;
+
+	/** Timestemp final do token. */
+	private long expiresIn;
+
+	/** Timestemp da criação do token. */
+	private long tokenGeneratedTimestamp;
+
+	/** Access Token do serviço. */
+	private String accessToken;
+
+	/** Client id do serviço. */
+	private String clientID;
+
+	/** Client Secret do serviço. */
+	private String clientSecret;
+
+	public String getClientID() {
+		return clientID;
+	}
+
+	public void setClientID(String clientID) {
+		this.clientID = clientID;
+	}
+
+	public String getClientSecret() {
+		return clientSecret;
+	}
+
+	public void setClientSecret(String clientSecret) {
+		this.clientSecret = clientSecret;
+	}
+
+	public String getRefreshToken() {
+		return refreshToken;
+	}
+
+	public void setRefreshToken(String refreshToken) {
+		this.refreshToken = refreshToken;
+	}
+
+
+	public String getAccessToken() {
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
 
 	public DriveConfigsModel() {
 		this._id = UUID.randomUUID().toString();
@@ -35,19 +94,27 @@ public class DriveConfigsModel {
 		this.emailContaPrincipal = emailContaPrincipal;
 	}
 
-	public String getEmailContaServico() {
-		return emailContaServico;
+	public long getTokenGeneratedTimestamp() {
+		return tokenGeneratedTimestamp;
 	}
 
-	public void setEmailContaServico(String emailContaServico) {
-		this.emailContaServico = emailContaServico;
+	public void setTokenGeneratedTimestamp(long tokenGeneratedTimestamp) {
+		this.tokenGeneratedTimestamp = tokenGeneratedTimestamp;
 	}
 
-	public String getStrJsonClientSecret() {
-		return strJsonClientSecret;
+	public long getExpiresIn() {
+		return expiresIn;
 	}
 
-	public void setStrJsonClientSecret(String strJsonClientSecret) {
-		this.strJsonClientSecret = strJsonClientSecret;
+	public void setExpiresIn(long expiresIn) {
+		this.expiresIn = expiresIn;
+	}
+
+	public DriveContextEnum getDriveContext() {
+		return driveContext;
+	}
+
+	public void setDriveContext(DriveContextEnum driveContext) {
+		this.driveContext = driveContext;
 	}
 }

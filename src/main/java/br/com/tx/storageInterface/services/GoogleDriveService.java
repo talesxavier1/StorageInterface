@@ -1,79 +1,218 @@
 package br.com.tx.storageInterface.services;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.UUID;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.DriveScopes;
+import com.google.api.services.drive.model.File;
 
 import br.com.tx.storageInterface.SpringContext;
+import br.com.tx.storageInterface.Utils.FileHashUtil;
 import br.com.tx.storageInterface.Utils.FilesUtils;
-import br.com.tx.storageInterface.models.DriveConfigsModel;
+import br.com.tx.storageInterface.drivers.GoogleDriveDrive;
+import br.com.tx.storageInterface.models.DriveFileInfoModel;
 
+/** Classe resposável por manipular arquivos no googleDrive. */
 public class GoogleDriveService {
 
-	private static Map<String, Drive> services = new HashMap<String, Drive>();
-	private static MongoDBService mongoDBService;
+	/** Instância do servico do mongoDB */
+	private MongoDBService dbService;
 
-	public static Drive getGoogleDriveService(String mainAccount) throws IOException, GeneralSecurityException {
-		var initializedDrive = services.get(mainAccount);
-		if (initializedDrive != null) {
-			return initializedDrive;
-		}
+	/** Drive do google Drive. */
+	private Drive googleDriveDrive;
 
-		if (mongoDBService == null) {
-			var springContext = SpringContext.getSpringContext();
-			mongoDBService = springContext.getBean(MongoDBService.class);
-		}
+	/** Conta de email principal do google drive. */
+	private String defaultAccout;
 
-		return initGoogleDriveService(mainAccount);
 
+	/**
+	 * 
+	 * @throws GeneralSecurityException Quando não é possível autenticar a conta google.
+	 * @throws IOException Quando não é possivel criar algum arquivo necessário para a autenticação com o google.
+	 */
+	public GoogleDriveService() throws GeneralSecurityException {
+		var springContext = SpringContext.getSpringContext();
+		this.dbService = springContext.getBean(MongoDBService.class);
+		this.defaultAccout = "npcpk1999.drive01@gmail.com";
+
+		this.googleDriveDrive = GoogleDriveDrive.getDrive(this.defaultAccout);
 	}
-
-	private static Drive initGoogleDriveService(String mainAccount) {
-
-		DriveConfigsModel driveConfigsModel = mongoDBService.getDriveConfigsRepository().getByEmailContaPrincipal(mainAccount);
-		if (driveConfigsModel == null) {
-			throw new NullPointerException("Não foi possível encontrar configurações para a conta " + mainAccount);
-		}
-
-		String newFileName = String.format("%s-%s", UUID.randomUUID().toString(), "client_secret.json");
-		String tempFilePath = FilesUtils.createJsonFileFromString(newFileName, driveConfigsModel.getStrJsonClientSecret());
-		if (tempFilePath == null) {
-			throw new NullPointerException("Não foi possível criar arquivo temporário de configurações.");
-		}
-
-		File initialFile = new File(tempFilePath);
-		Drive newDrive = null;
 	
-		try(InputStream inputStream = new FileInputStream(initialFile)){
-			GoogleCredential credential = GoogleCredential.fromStream(inputStream).createScoped(Collections.singleton(DriveScopes.DRIVE));
-			NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-			newDrive = new Drive.Builder(HTTP_TRANSPORT, GsonFactory.getDefaultInstance(), credential).setApplicationName("GoogleDrive"+"-"+mainAccount).build();
-		} catch (IOException | GeneralSecurityException e) {
+	/**
+	 * Função responsável por fazer o download de um arquivo armazenado no google
+	 * Drive.
+	 * 
+	 * @param driveFileID ID do arquivo no Google Drive.
+	 * @param fileName    Nome do arquivo que vai ser criado localmente. Caso não
+	 *                    seja passado, o arquivo será criado com o nome original
+	 *                    dele.
+	 * @return Retorna o Path do arquivo temporário criado.
+	 */
+	public String downloadFile(String driveFileID, String fileName) {
+
+		if (fileName == null) {
+			DriveFileInfoModel driveFileInfo = this.dbService.getDriveFileInfoRepository().findBy_id(driveFileID);
+			if (driveFileInfo == null) {
+				throw new NullPointerException("DriveFileInfoModel não encontrado.");
+			}
+			fileName = driveFileInfo.getFileName();
+		}
+
+		if (fileName == null) {
+			System.out.println("GoogleDrive.downloadFile() -  file name não passado.");
+			fileName = UUID.randomUUID().toString();
+		}
+
+		if (driveFileID == null) {
+			throw new NullPointerException("driveFileID nulo.");
+		}
+
+		String tempFIlePath = null;
+		try {
+			String cachedContent = RedisOperationsService.getCache("FILE-B64-" + driveFileID);
+			if (cachedContent != null) {
+				byte[] bContent = Base64.getDecoder().decode(cachedContent);
+				tempFIlePath = FilesUtils.createTempFile(fileName, bContent, 60);
+			} else {
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+				googleDriveDrive.files().get(driveFileID).executeMediaAndDownloadTo(outputStream);
+				byte[] fileContent = outputStream.toByteArray();
+
+				tempFIlePath = FilesUtils.createTempFile(fileName, fileContent, 60);
+
+				String encodedContent = Base64.getEncoder().encodeToString(fileContent);
+				RedisOperationsService.addCache("FILE-B64-" + driveFileID, encodedContent);
+			}
+		} catch (IOException e) {
 			e.printStackTrace();
-		} finally {
-			FilesUtils.tryDeleteFile(tempFilePath);
-		}
-	
-		if (newDrive != null) {
-			services.put(mainAccount, newDrive);
-		} else {
-			throw new NullPointerException("Não foi possível criar conexão com GoogleDrive.");
+			return null;
 		}
 
-		return newDrive;
+		return tempFIlePath;
 	}
 
+	/**
+	 * Função responsável por retornar o conteúdo do arquivo armazenado no google
+	 * drive.
+	 * 
+	 * @deprecated Função não é mais utilizada, porque os arquivos de texto estão
+	 *             sendo enviados para o google gmail.
+	 * 
+	 * @param fileID ID do aqruivo no google drive.
+	 * @return Conteúdo do arquivo no google Drive.
+	 */
+	@Deprecated
+	public String getFileContent(String fileID) {
+		String cachedContent = RedisOperationsService.getCache("FILE-STR-CONTENT-" + fileID);
+		if (cachedContent != null) {
+			return cachedContent;
+		}
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		try {
+			this.googleDriveDrive.files().get(fileID).executeMediaAndDownloadTo(outputStream);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return "";
+		}
+		String result = outputStream.toString(StandardCharsets.UTF_8);
+		RedisOperationsService.addCache("FILE-STR-CONTENT-" + fileID, result);
+
+		return result;
+	}
+
+	/**
+	 * Função responsável por fazer o upload do arquivo no google drive.
+	 * 
+	 * @param chunk          Arquivo.
+	 * @param originFileName Nome do arquivo.
+	 * @return Retorna o ID do arquivo no google drive.
+	 * @throws IOException              Quando não é possível calcular o hash md5 do
+	 *                                  arquivo ou enviar o arquivo para o google
+	 *                                  Drive.
+	 * @throws NoSuchAlgorithmException Quando não é possível calcular o hash md5 do
+	 *                                  arquivo
+	 */
+	public String uploadFile(MultipartFile chunk, String originFileName) throws IOException, NoSuchAlgorithmException {
+		String fileMD5Hash = FileHashUtil.generateMD5Hash(chunk);
+		var driveFileInfoResultFind = findDriveFileInfo(null, fileMD5Hash);
+		if (driveFileInfoResultFind != null) {
+			return driveFileInfoResultFind.get_id();
+		}
+		
+		String newFileName = String.format("%s-%s", UUID.randomUUID().toString(), originFileName);
+		File fileMetadata = new File();
+		fileMetadata.setName(newFileName);
+
+		String tempFileDir = FilesUtils.createTempFile(newFileName, chunk.getBytes());
+		var file = new java.io.File(tempFileDir);
+
+		FileContent mediaContent = new FileContent(chunk.getContentType(), file);
+
+		var uploadResult = this.googleDriveDrive.files().create(fileMetadata, mediaContent).setFields("id").execute();
+
+		FilesUtils.tryDeleteFile(tempFileDir);
+		
+		var newDriveFileInfo = new DriveFileInfoModel();
+		newDriveFileInfo.setFileHash(fileMD5Hash);
+		newDriveFileInfo.set_id(uploadResult.getId());
+		newDriveFileInfo.setFileName(newFileName);
+		this.dbService.getDriveFileInfoRepository().insert(newDriveFileInfo);
+
+		
+		return uploadResult.getId();
+
+	}
+
+	/**
+	 * Função que verifica se existe registro de upload do arquivo no google drive
+	 * pelo hashmd5.
+	 * 
+	 * @deprecated Não é necessário, pois a função findDriveFileInfo substituiu
+	 *             essa.
+	 * @param fileMD5Hash HashMD5 do arquivo.
+	 * @return Retorna true caso encontre algum registro de upload no banco.
+	 */
+	@Deprecated
+	public boolean fileExistInDrive(String fileMD5Hash) {
+		var fileModel = dbService.getDriveFileInfoRepository().countByFileHash(fileMD5Hash);
+
+		if (fileModel > 0) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Função que procura as informaçõe de upload de um arquivo com base no ID ou
+	 * hash do arquivo.
+	 * 
+	 * 
+	 * @param id          ID do arquivo no banco.
+	 * @param fileMD5Hash hashmd5 do aqruivo.
+	 * @return Retorna a classe DriveFileInfoModel.
+	 */
+	public DriveFileInfoModel findDriveFileInfo(String id, String fileMD5Hash) {
+		if (id != null) {
+			return dbService.getDriveFileInfoRepository().findBy_id(id);
+		} else if (fileMD5Hash != null) {
+			return dbService.getDriveFileInfoRepository().findByFileHash(fileMD5Hash);
+		}
+		return null;
+	}
+
+	/**
+	 * @return Retorna a conta google pricipal do drive.
+	 */
+	public String getDefaultAccout() {
+		return defaultAccout;
+	}
 }

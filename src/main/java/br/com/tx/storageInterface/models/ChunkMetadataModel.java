@@ -5,21 +5,55 @@ import java.io.Serializable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/**
+ * Classe que representa o detalhamento da chunck de arquivo que está sendo enviada.
+ */
 @Document(collection = "PartsChunks")
 public class ChunkMetadataModel implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	private String _id;
-
+	
+	/**
+	 * ID do upload.
+	 * É necessário quando um arquio é dividido em vários chunks e enviados em chamadas separadas.
+	 */
 	private String UploadId;
+	/**
+	 * É o mesmo campo UploadId, só está repetido para não dar problema no Mongo por conta do nome do campo iniciar com letra maiúscula.
+	 * Esse campo é deve ser preenchido com o valor de UploadId quando a classe for construída. Esse campo é o campo usado para fazer as buscas no mongo.
+	 * Está duplicado porque o devextreme so consegue mandar esse cmapo com letra maiúscula.
+	 */
+	@Schema(hidden = true)
 	private String _uploadId;
+	/**
+	 * Nome do arquivo.
+	 */
 	private String FileName;
+	/**
+	 * index do chunk.
+	 * Quando o arquivo é dividido em vários chunks, esse campo armazena o index do chunk.
+	 * Se o Index for igual ao TotalCount, significa que é a última parte da sequencia dos chunks.
+	 */
 	private Integer Index;
+	/**
+	 * número de chunks.
+	 * Quando o arquivo é dividido, esse campo armazena a quantidade de chunck total.
+	 */
 	private Integer TotalCount;
+	/**
+	 * Tamanho do chunk em bytes.
+	 */
 	private Long FileSize;
+	/**
+	 * bytes do arquivo enviado no chunk.
+	 * Esse campo é útilizado para armazenar temporariamente os bytes do chunk no banco até que a última parte chegue.
+	 */
+	@Schema(hidden = true)
 	private byte[] partByte;
-
 
 	public ChunkMetadataModel() {
 	}
@@ -28,8 +62,8 @@ public class ChunkMetadataModel implements Serializable {
 		return UploadId;
 	}
 
-	public void setUploadId(String uploadId) {
-		uploadId = uploadId;
+	public void setUploadId(String UploadId) {
+		this.UploadId = UploadId;
 	}
 
 	public String getFileName() {
