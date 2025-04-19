@@ -2,6 +2,7 @@ package br.com.tx.storageInterface.models;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * Classe que representa os IDs de contexto da requisição.
@@ -34,7 +35,7 @@ public class APIContextModel {
 	 * ID da versão do pacote ou atividade
 	 * Quando não é enviado nos métodos de consulta, esse campo é desconsiderado na busca do banco.
 	 */
-	@NotBlank
+	@Size(min = 1)
 	private String packageVersionID;
 	
 	/**
